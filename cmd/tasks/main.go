@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -538,6 +539,135 @@ Example:
 	},
 }
 
+var editCmd = &cobra.Command{
+	Use:   "edit <id>",
+	Short: "Edit a task's description in $TASKS_EDITOR",
+	Long: `Open a task's description in your configured editor.
+
+Uses $TASKS_EDITOR if set, otherwise defaults to nvim, then nano, then vi.
+After saving and closing, the description is updated.
+
+Example:
+  tasks edit ts-a1b2c3
+  TASKS_EDITOR=code tasks edit ts-a1b2c3`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		database, err := openDB()
+		if err != nil {
+			return err
+		}
+		defer database.Close()
+
+		id := args[0]
+
+		// Get current description
+		item, err := database.GetItem(id)
+		if err != nil {
+			return err
+		}
+
+		// Get editor (prefer $TASKS_EDITOR, then nvim, then nano)
+		editor := os.Getenv("TASKS_EDITOR")
+		if editor == "" {
+			if _, err := exec.LookPath("nvim"); err == nil {
+				editor = "nvim"
+			} else if _, err := exec.LookPath("nano"); err == nil {
+				editor = "nano"
+			} else {
+				editor = "vi"
+			}
+		}
+
+		// Create temp file
+		tmpfile, err := os.CreateTemp("", "tasks-edit-*.md")
+		if err != nil {
+			return fmt.Errorf("failed to create temp file: %w", err)
+		}
+		tmpPath := tmpfile.Name()
+		defer os.Remove(tmpPath)
+
+		// Write current description
+		if _, err := tmpfile.WriteString(item.Description); err != nil {
+			tmpfile.Close()
+			return fmt.Errorf("failed to write temp file: %w", err)
+		}
+		tmpfile.Close()
+
+		// Get original stat for comparison
+		origStat, err := os.Stat(tmpPath)
+		if err != nil {
+			return fmt.Errorf("failed to stat temp file: %w", err)
+		}
+
+		// Open editor
+		editorCmd := execCommand(editor, tmpPath)
+		editorCmd.Stdin = os.Stdin
+		editorCmd.Stdout = os.Stdout
+		editorCmd.Stderr = os.Stderr
+		if err := editorCmd.Run(); err != nil {
+			return fmt.Errorf("editor failed: %w", err)
+		}
+
+		// Check if file was modified
+		newStat, err := os.Stat(tmpPath)
+		if err != nil {
+			return fmt.Errorf("failed to stat temp file: %w", err)
+		}
+
+		if newStat.ModTime().Equal(origStat.ModTime()) {
+			fmt.Println("No changes made")
+			return nil
+		}
+
+		// Read new content
+		newContent, err := os.ReadFile(tmpPath)
+		if err != nil {
+			return fmt.Errorf("failed to read temp file: %w", err)
+		}
+
+		// Update description
+		if err := database.SetDescription(id, string(newContent)); err != nil {
+			return err
+		}
+		fmt.Printf("Updated description for %s\n", id)
+		return nil
+	},
+}
+
+// execCommand wraps exec.Command for testing
+var execCommand = func(name string, arg ...string) *exec.Cmd {
+	return exec.Command(name, arg...)
+}
+
+var descCmd = &cobra.Command{
+	Use:   "desc <id> <text>",
+	Short: "Replace a task's description",
+	Long: `Replace a task's entire description with new text.
+
+Use this when you need to rewrite or fix the description content.
+For adding to existing content, use 'tasks append' instead.
+
+Example:
+  tasks desc ts-a1b2c3 "New description text here"`,
+	Args: cobra.MinimumNArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		database, err := openDB()
+		if err != nil {
+			return err
+		}
+		defer database.Close()
+
+		id := args[0]
+		text := strings.Join(args[1:], " ")
+
+		if err := database.SetDescription(id, text); err != nil {
+			return err
+		}
+		fmt.Printf("Updated description for %s\n", id)
+		return nil
+	},
+}
+
 var depCmd = &cobra.Command{
 	Use:   "dep <id> --on <other>",
 	Short: "Add a dependency",
@@ -940,6 +1070,8 @@ func init() {
 	rootCmd.AddCommand(projectsCmd)
 	rootCmd.AddCommand(graphCmd)
 	rootCmd.AddCommand(appendCmd)
+	rootCmd.AddCommand(descCmd)
+	rootCmd.AddCommand(editCmd)
 	rootCmd.AddCommand(depCmd)
 	rootCmd.AddCommand(parentCmd)
 	rootCmd.AddCommand(blocksCmd)

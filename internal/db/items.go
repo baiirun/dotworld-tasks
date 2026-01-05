@@ -128,6 +128,25 @@ func (db *DB) SetParent(itemID, parentID string) error {
 	return nil
 }
 
+// SetDescription replaces an item's description entirely.
+func (db *DB) SetDescription(id string, text string) error {
+	result, err := db.Exec(`
+		UPDATE items
+		SET description = ?,
+		    updated_at = ?
+		WHERE id = ?`,
+		text, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("failed to set description: %w", err)
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("item not found: %s (use 'tasks list' to see available items)", id)
+	}
+	return nil
+}
+
 // DeleteItem removes an item and its associated logs and dependencies.
 func (db *DB) DeleteItem(id string) error {
 	// Check if item exists first

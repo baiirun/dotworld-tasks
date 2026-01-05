@@ -273,6 +273,64 @@ func TestSetParent_NotEpic(t *testing.T) {
 	}
 }
 
+func TestSetDescription(t *testing.T) {
+	db := setupTestDB(t)
+
+	item := &model.Item{
+		ID:          model.GenerateID(model.ItemTypeTask),
+		Project:     "test",
+		Type:        model.ItemTypeTask,
+		Title:       "Test",
+		Description: "Original description",
+		Status:      model.StatusOpen,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+	db.CreateItem(item)
+
+	if err := db.SetDescription(item.ID, "New description"); err != nil {
+		t.Fatalf("failed to set description: %v", err)
+	}
+
+	got, _ := db.GetItem(item.ID)
+	if got.Description != "New description" {
+		t.Errorf("description = %q, want %q", got.Description, "New description")
+	}
+}
+
+func TestSetDescription_EmptyToContent(t *testing.T) {
+	db := setupTestDB(t)
+
+	item := &model.Item{
+		ID:        model.GenerateID(model.ItemTypeTask),
+		Project:   "test",
+		Type:      model.ItemTypeTask,
+		Title:     "Test",
+		Status:    model.StatusOpen,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	db.CreateItem(item)
+
+	if err := db.SetDescription(item.ID, "Added description"); err != nil {
+		t.Fatalf("failed to set description: %v", err)
+	}
+
+	got, _ := db.GetItem(item.ID)
+	if got.Description != "Added description" {
+		t.Errorf("description = %q, want %q", got.Description, "Added description")
+	}
+}
+
+func TestSetDescription_NotFound(t *testing.T) {
+	db := setupTestDB(t)
+
+	err := db.SetDescription("nonexistent", "text")
+	if err == nil {
+		t.Error("expected error for nonexistent item")
+	}
+}
+
 func TestSetParent_NotFound(t *testing.T) {
 	db := setupTestDB(t)
 

@@ -82,6 +82,8 @@ tasks done ts-a1b2c3
 | `tasks block <id> <reason>` | Mark blocked with reason |
 | `tasks log <id> <message>` | Add timestamped log entry |
 | `tasks append <id> <text>` | Append to task description |
+| `tasks desc <id> <text>` | Replace task description |
+| `tasks edit <id>` | Edit description in $TASKS_EDITOR |
 
 ### Organization
 
