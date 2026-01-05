@@ -402,6 +402,34 @@ Example:
 	},
 }
 
+var primeCmd = &cobra.Command{
+	Use:   "prime",
+	Short: "Output context for Claude Code hooks",
+	Long: `Output essential workflow context for AI agents.
+
+Designed to run on SessionStart and PreCompact hooks to ensure
+agents maintain context about the tasks workflow.
+
+Example hook configuration in Claude Code settings:
+  "hooks": {
+    "SessionStart": [{"command": "tasks prime"}],
+    "PreCompact": [{"command": "tasks prime"}]
+  }`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		database, err := openDB()
+		if err != nil {
+			// Still output prime content even if DB fails
+			printPrimeContent(nil)
+			return nil
+		}
+		defer database.Close()
+
+		report, _ := database.ProjectStatus("")
+		printPrimeContent(report)
+		return nil
+	},
+}
+
 func init() {
 	// Global flags
 	rootCmd.PersistentFlags().StringVarP(&flagProject, "project", "p", "", "Project scope")
@@ -428,6 +456,7 @@ func init() {
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(appendCmd)
 	rootCmd.AddCommand(depCmd)
+	rootCmd.AddCommand(primeCmd)
 }
 
 func main() {
@@ -524,5 +553,77 @@ func printStatusReport(report *db.StatusReport) {
 		for _, item := range report.ReadyItems {
 			fmt.Printf("  [%s] %s (pri %d)\n", item.ID, item.Title, item.Priority)
 		}
+	}
+}
+
+func printPrimeContent(report *db.StatusReport) {
+	fmt.Println(`# Tasks CLI Context
+
+This project uses 'tasks' for cross-session task management.
+Run 'tasks status' to see current state.
+
+## SESSION CLOSE PROTOCOL
+
+Before ending ANY session, you MUST complete ALL of these steps:
+
+1. Log progress on active tasks:
+   tasks log <id> "What you accomplished"
+
+2. Update task status:
+   - tasks done <id>     # if complete
+   - tasks block <id> "reason"  # if blocked
+
+3. Add handoff context for next agent:
+   tasks append <id> "Next steps: ..."
+
+NEVER end a session without updating task state.
+Work is NOT complete until tasks reflect reality.
+
+## Core Rules
+
+- Use 'tasks' for strategic work tracking (persists across sessions)
+- Use TodoWrite for tactical within-session checklists
+- Always claim work before starting: tasks start <id>
+- Log progress frequently, not just at the end
+
+## Essential Commands
+
+# Finding work
+tasks status              # Overview of all projects
+tasks ready               # Tasks ready to work on
+tasks show <id>           # Full details including logs
+
+# Working
+tasks start <id>          # Claim a task
+tasks log <id> "message"  # Log progress
+tasks done <id>           # Mark complete
+tasks block <id> "why"    # Mark blocked
+
+# Creating
+tasks add "title" -p project    # New task
+tasks add "title" -e            # New epic
+tasks dep <id> --on <other>     # Add dependency
+
+## Current State`)
+
+	if report != nil {
+		fmt.Printf("\n%d open, %d in progress, %d blocked, %d done\n",
+			report.Open, report.InProgress, report.Blocked, report.Done)
+
+		if len(report.InProgItems) > 0 {
+			fmt.Println("\nIn progress:")
+			for _, item := range report.InProgItems {
+				fmt.Printf("  [%s] %s\n", item.ID, item.Title)
+			}
+		}
+
+		if len(report.BlockedItems) > 0 {
+			fmt.Println("\nBlocked:")
+			for _, item := range report.BlockedItems {
+				fmt.Printf("  [%s] %s\n", item.ID, item.Title)
+			}
+		}
+	} else {
+		fmt.Println("\n(No database connection - run 'tasks init' if needed)")
 	}
 }
