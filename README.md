@@ -67,7 +67,9 @@ tasks done ts-a1b2c3
 
 | Command | Description |
 |---------|-------------|
-| `tasks dep <id> --on <other>` | Add dependency (id depends on other) |
+| `tasks dep <id> --on <other>` | Add dependency (id blocked until other is done) |
+| `tasks graph` | Show dependency graph |
+| `tasks projects` | List all projects |
 | `tasks add -e <title>` | Create an epic instead of task |
 
 ### Flags
@@ -139,6 +141,24 @@ tasks done ts-d4e5f6
 # Or mark blocked for next agent
 tasks block ts-d4e5f6 "Need API spec for OAuth flow"
 ```
+
+### Dependencies
+
+Use dependencies to enforce task ordering. A task with unmet dependencies won't appear in `tasks ready`.
+
+```bash
+# ts-backend must complete before ts-frontend can start
+tasks dep ts-frontend --on ts-backend
+
+# View all dependencies
+tasks graph
+
+# Output:
+# ts-frontend [open] Build frontend components
+#   └── ts-backend [in_progress] Implement API endpoints
+```
+
+The `ready` command automatically filters out tasks with unmet dependencies, so agents only see work they can actually start.
 
 ## Claude Code Integration
 

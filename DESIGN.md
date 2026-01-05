@@ -87,7 +87,8 @@ tasks block <reason>              # set blocked + log reason
 tasks done [id]                   # complete task
 tasks append <id> <text>          # append to description
 tasks dep <id> --on <other>       # add dependency
-tasks context [project]           # get/set default project
+tasks graph [--project=X]         # show dependency tree
+tasks projects                    # list all projects
 tasks status [--project=X]        # overview for agent spin-up
 ```
 

@@ -56,3 +56,48 @@ func (db *DB) HasUnmetDeps(itemID string) (bool, error) {
 	}
 	return count > 0, nil
 }
+
+// DepEdge represents a dependency relationship with item details.
+type DepEdge struct {
+	ItemID       string
+	ItemTitle    string
+	ItemStatus   string
+	DependsOnID  string
+	DependsOnTitle  string
+	DependsOnStatus string
+}
+
+// GetAllDeps returns all dependency edges with item details, optionally filtered by project.
+func (db *DB) GetAllDeps(project string) ([]DepEdge, error) {
+	query := `
+		SELECT
+			d.item_id, i1.title, i1.status,
+			d.depends_on, i2.title, i2.status
+		FROM deps d
+		JOIN items i1 ON d.item_id = i1.id
+		JOIN items i2 ON d.depends_on = i2.id`
+	args := []any{}
+
+	if project != "" {
+		query += ` WHERE i1.project = ?`
+		args = append(args, project)
+	}
+	query += ` ORDER BY i1.priority, i1.id`
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query deps: %w", err)
+	}
+	defer rows.Close()
+
+	var edges []DepEdge
+	for rows.Next() {
+		var e DepEdge
+		if err := rows.Scan(&e.ItemID, &e.ItemTitle, &e.ItemStatus,
+			&e.DependsOnID, &e.DependsOnTitle, &e.DependsOnStatus); err != nil {
+			return nil, fmt.Errorf("failed to scan dep edge: %w", err)
+		}
+		edges = append(edges, e)
+	}
+	return edges, rows.Err()
+}

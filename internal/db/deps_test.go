@@ -135,3 +135,94 @@ func TestGetDeps_Empty(t *testing.T) {
 		t.Errorf("expected 0 deps, got %d", len(deps))
 	}
 }
+
+func TestGetAllDeps(t *testing.T) {
+	db := setupTestDB(t)
+
+	task1 := createTestItem(t, db, "Task 1")
+	task2 := createTestItem(t, db, "Task 2")
+	task3 := createTestItem(t, db, "Task 3")
+
+	// task2 depends on task1, task3 depends on task1
+	db.AddDep(task2.ID, task1.ID)
+	db.AddDep(task3.ID, task1.ID)
+
+	edges, err := db.GetAllDeps("")
+	if err != nil {
+		t.Fatalf("failed to get all deps: %v", err)
+	}
+
+	if len(edges) != 2 {
+		t.Errorf("expected 2 edges, got %d", len(edges))
+	}
+
+	// Check edge details
+	for _, e := range edges {
+		if e.DependsOnID != task1.ID {
+			t.Errorf("expected all deps on %s, got %s", task1.ID, e.DependsOnID)
+		}
+		if e.DependsOnTitle != "Task 1" {
+			t.Errorf("expected dep title 'Task 1', got %q", e.DependsOnTitle)
+		}
+	}
+}
+
+func TestGetAllDeps_FilterByProject(t *testing.T) {
+	db := setupTestDB(t)
+
+	// Create tasks in "test" project (default from createTestItem)
+	task1 := createTestItem(t, db, "Task 1")
+	task2 := createTestItem(t, db, "Task 2")
+	db.AddDep(task2.ID, task1.ID)
+
+	// Create task in different project
+	otherTask := &model.Item{
+		ID:      model.GenerateID(model.ItemTypeTask),
+		Project: "other",
+		Type:    model.ItemTypeTask,
+		Title:   "Other Task",
+		Status:  model.StatusOpen,
+	}
+	db.CreateItem(otherTask)
+	otherTask2 := &model.Item{
+		ID:      model.GenerateID(model.ItemTypeTask),
+		Project: "other",
+		Type:    model.ItemTypeTask,
+		Title:   "Other Task 2",
+		Status:  model.StatusOpen,
+	}
+	db.CreateItem(otherTask2)
+	db.AddDep(otherTask2.ID, otherTask.ID)
+
+	// Filter by "test" project
+	edges, err := db.GetAllDeps("test")
+	if err != nil {
+		t.Fatalf("failed to get deps: %v", err)
+	}
+	if len(edges) != 1 {
+		t.Errorf("expected 1 edge for 'test' project, got %d", len(edges))
+	}
+
+	// Filter by "other" project
+	edges, err = db.GetAllDeps("other")
+	if err != nil {
+		t.Fatalf("failed to get deps: %v", err)
+	}
+	if len(edges) != 1 {
+		t.Errorf("expected 1 edge for 'other' project, got %d", len(edges))
+	}
+}
+
+func TestGetAllDeps_Empty(t *testing.T) {
+	db := setupTestDB(t)
+
+	createTestItem(t, db, "Task 1")
+
+	edges, err := db.GetAllDeps("")
+	if err != nil {
+		t.Fatalf("failed to get all deps: %v", err)
+	}
+	if len(edges) != 0 {
+		t.Errorf("expected 0 edges, got %d", len(edges))
+	}
+}

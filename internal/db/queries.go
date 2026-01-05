@@ -141,6 +141,25 @@ func (db *DB) ProjectStatus(project string) (*StatusReport, error) {
 	return report, nil
 }
 
+// ListProjects returns all distinct project names.
+func (db *DB) ListProjects() ([]string, error) {
+	rows, err := db.Query(`SELECT DISTINCT project FROM items WHERE project != '' ORDER BY project`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query projects: %w", err)
+	}
+	defer rows.Close()
+
+	var projects []string
+	for rows.Next() {
+		var project string
+		if err := rows.Scan(&project); err != nil {
+			return nil, fmt.Errorf("failed to scan project: %w", err)
+		}
+		projects = append(projects, project)
+	}
+	return projects, rows.Err()
+}
+
 // queryItems is a helper to scan item rows.
 func (db *DB) queryItems(query string, args ...any) ([]model.Item, error) {
 	rows, err := db.Query(query, args...)

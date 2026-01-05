@@ -338,6 +338,66 @@ Example:
 	},
 }
 
+var graphCmd = &cobra.Command{
+	Use:   "graph",
+	Short: "Show dependency graph",
+	Long: `Show all task dependencies as a graph.
+
+Displays which tasks are blocked by other tasks.
+
+Examples:
+  tasks graph
+  tasks graph -p myproject`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		database, err := openDB()
+		if err != nil {
+			return err
+		}
+		defer database.Close()
+
+		edges, err := database.GetAllDeps(flagProject)
+		if err != nil {
+			return err
+		}
+
+		if len(edges) == 0 {
+			fmt.Println("No dependencies")
+			return nil
+		}
+
+		printDepGraph(edges)
+		return nil
+	},
+}
+
+var projectsCmd = &cobra.Command{
+	Use:   "projects",
+	Short: "List all projects",
+	Long:  `List all projects that have tasks.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		database, err := openDB()
+		if err != nil {
+			return err
+		}
+		defer database.Close()
+
+		projects, err := database.ListProjects()
+		if err != nil {
+			return err
+		}
+
+		if len(projects) == 0 {
+			fmt.Println("No projects")
+			return nil
+		}
+
+		for _, p := range projects {
+			fmt.Println(p)
+		}
+		return nil
+	},
+}
+
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show project status overview",
@@ -566,6 +626,8 @@ func init() {
 	rootCmd.AddCommand(deleteCmd)
 	rootCmd.AddCommand(logCmd)
 	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(projectsCmd)
+	rootCmd.AddCommand(graphCmd)
 	rootCmd.AddCommand(appendCmd)
 	rootCmd.AddCommand(depCmd)
 	rootCmd.AddCommand(primeCmd)
@@ -669,6 +731,37 @@ func printStatusReport(report *db.StatusReport) {
 	}
 }
 
+func printDepGraph(edges []db.DepEdge) {
+	// Group by item
+	type depInfo struct {
+		title  string
+		status string
+		deps   []db.DepEdge
+	}
+	items := make(map[string]*depInfo)
+	order := []string{}
+
+	for _, e := range edges {
+		if _, ok := items[e.ItemID]; !ok {
+			items[e.ItemID] = &depInfo{title: e.ItemTitle, status: e.ItemStatus}
+			order = append(order, e.ItemID)
+		}
+		items[e.ItemID].deps = append(items[e.ItemID].deps, e)
+	}
+
+	for _, id := range order {
+		info := items[id]
+		fmt.Printf("%s [%s] %s\n", id, info.status, info.title)
+		for i, dep := range info.deps {
+			prefix := "├──"
+			if i == len(info.deps)-1 {
+				prefix = "└──"
+			}
+			fmt.Printf("  %s %s [%s] %s\n", prefix, dep.DependsOnID, dep.DependsOnStatus, dep.DependsOnTitle)
+		}
+	}
+}
+
 func printPrimeContent(report *db.StatusReport) {
 	fmt.Println(`# Tasks CLI Context
 
@@ -703,8 +796,10 @@ Work is NOT complete until tasks reflect reality.
 
 # Finding work
 tasks status              # Overview of all projects
-tasks ready               # Tasks ready to work on
+tasks ready               # Tasks ready to work on (deps satisfied)
 tasks show <id>           # Full details including logs
+tasks graph               # Show dependency tree
+tasks projects            # List all projects
 
 # Working
 tasks start <id>          # Claim a task
@@ -712,10 +807,10 @@ tasks log <id> "message"  # Log progress
 tasks done <id>           # Mark complete
 tasks block <id> "why"    # Mark blocked
 
-# Creating
+# Creating & organizing
 tasks add "title" -p project    # New task
 tasks add "title" -e            # New epic
-tasks dep <id> --on <other>     # Add dependency
+tasks dep <id> --on <other>     # Add dependency (id blocked until other done)
 
 ## Current State`)
 
