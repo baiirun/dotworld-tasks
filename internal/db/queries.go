@@ -141,9 +141,9 @@ func (db *DB) ProjectStatus(project string) (*StatusReport, error) {
 	return report, nil
 }
 
-// ListProjects returns all distinct project names.
+// ListProjects returns all project names from the projects table.
 func (db *DB) ListProjects() ([]string, error) {
-	rows, err := db.Query(`SELECT DISTINCT project FROM items WHERE project != '' ORDER BY project`)
+	rows, err := db.Query(`SELECT name FROM projects ORDER BY name`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query projects: %w", err)
 	}
@@ -151,11 +151,11 @@ func (db *DB) ListProjects() ([]string, error) {
 
 	var projects []string
 	for rows.Next() {
-		var project string
-		if err := rows.Scan(&project); err != nil {
+		var name string
+		if err := rows.Scan(&name); err != nil {
 			return nil, fmt.Errorf("failed to scan project: %w", err)
 		}
-		projects = append(projects, project)
+		projects = append(projects, name)
 	}
 	return projects, rows.Err()
 }

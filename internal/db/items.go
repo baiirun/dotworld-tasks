@@ -9,12 +9,20 @@ import (
 )
 
 // CreateItem inserts a new item into the database.
+// If the item has a project, it will be auto-created if it doesn't exist.
 func (db *DB) CreateItem(item *model.Item) error {
 	if !item.Type.IsValid() {
 		return fmt.Errorf("invalid item type: %s", item.Type)
 	}
 	if !item.Status.IsValid() {
 		return fmt.Errorf("invalid status: %s", item.Status)
+	}
+
+	// Auto-create project if specified
+	if item.Project != "" {
+		if err := db.EnsureProject(item.Project); err != nil {
+			return err
+		}
 	}
 
 	_, err := db.Exec(`

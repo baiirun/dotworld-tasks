@@ -17,7 +17,7 @@ func TestOnboard_CreatesNewFile(t *testing.T) {
 	defer os.Chdir(oldWd)
 
 	output := captureOutput(func() {
-		if err := runOnboard(); err != nil {
+		if err := runOnboard(false); err != nil {
 			t.Fatalf("runOnboard failed: %v", err)
 		}
 	})
@@ -60,7 +60,7 @@ func TestOnboard_AppendsToExisting(t *testing.T) {
 	defer os.Chdir(oldWd)
 
 	output := captureOutput(func() {
-		if err := runOnboard(); err != nil {
+		if err := runOnboard(false); err != nil {
 			t.Fatalf("runOnboard failed: %v", err)
 		}
 	})
@@ -100,7 +100,7 @@ func TestOnboard_Idempotent(t *testing.T) {
 	defer os.Chdir(oldWd)
 
 	output := captureOutput(func() {
-		if err := runOnboard(); err != nil {
+		if err := runOnboard(false); err != nil {
 			t.Fatalf("runOnboard failed: %v", err)
 		}
 	})
@@ -137,7 +137,7 @@ func TestOnboard_LowercaseFile(t *testing.T) {
 	defer os.Chdir(oldWd)
 
 	output := captureOutput(func() {
-		if err := runOnboard(); err != nil {
+		if err := runOnboard(false); err != nil {
 			t.Fatalf("runOnboard failed: %v", err)
 		}
 	})
@@ -176,7 +176,7 @@ func TestOnboard_SnippetContent(t *testing.T) {
 	defer os.Chdir(oldWd)
 
 	captureOutput(func() {
-		if err := runOnboard(); err != nil {
+		if err := runOnboard(false); err != nil {
 			t.Fatalf("runOnboard failed: %v", err)
 		}
 	})
@@ -200,5 +200,133 @@ func TestOnboard_SnippetContent(t *testing.T) {
 		if !strings.Contains(string(content), cmd) {
 			t.Errorf("missing command reference: %s", cmd)
 		}
+	}
+}
+
+func TestOnboard_ForceReplacesSection(t *testing.T) {
+	dir := t.TempDir()
+	claudePath := filepath.Join(dir, "CLAUDE.md")
+
+	// Create file with old Task Tracking section
+	oldContent := "# My Project\n\n## Task Tracking\n\nOld instructions here.\n"
+	if err := os.WriteFile(claudePath, []byte(oldContent), 0644); err != nil {
+		t.Fatalf("failed to write existing CLAUDE.md: %v", err)
+	}
+
+	// Change to temp dir for the test
+	oldWd, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(oldWd)
+
+	output := captureOutput(func() {
+		if err := runOnboard(true); err != nil {
+			t.Fatalf("runOnboard --force failed: %v", err)
+		}
+	})
+
+	// Check output message
+	if !strings.Contains(output, "Updated Task Tracking section") {
+		t.Errorf("expected 'Updated Task Tracking section' message, got: %s", output)
+	}
+
+	// Check content was replaced
+	content, err := os.ReadFile(claudePath)
+	if err != nil {
+		t.Fatalf("failed to read CLAUDE.md: %v", err)
+	}
+
+	if strings.Contains(string(content), "Old instructions here") {
+		t.Error("old content should have been replaced")
+	}
+	if !strings.Contains(string(content), "tasks prime") {
+		t.Error("should have new snippet content")
+	}
+	if !strings.Contains(string(content), "# My Project") {
+		t.Error("content before section should be preserved")
+	}
+}
+
+func TestOnboard_ForcePreservesContentAfterSection(t *testing.T) {
+	dir := t.TempDir()
+	claudePath := filepath.Join(dir, "CLAUDE.md")
+
+	// Create file with Task Tracking in the middle
+	oldContent := `# My Project
+
+## Task Tracking
+
+Old instructions.
+
+## Other Section
+
+This should be preserved.
+`
+	if err := os.WriteFile(claudePath, []byte(oldContent), 0644); err != nil {
+		t.Fatalf("failed to write existing CLAUDE.md: %v", err)
+	}
+
+	// Change to temp dir for the test
+	oldWd, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(oldWd)
+
+	captureOutput(func() {
+		if err := runOnboard(true); err != nil {
+			t.Fatalf("runOnboard --force failed: %v", err)
+		}
+	})
+
+	content, err := os.ReadFile(claudePath)
+	if err != nil {
+		t.Fatalf("failed to read CLAUDE.md: %v", err)
+	}
+
+	// Check that content after the section is preserved
+	if !strings.Contains(string(content), "## Other Section") {
+		t.Error("section after Task Tracking should be preserved")
+	}
+	if !strings.Contains(string(content), "This should be preserved") {
+		t.Error("content after Task Tracking should be preserved")
+	}
+	// Check Task Tracking was updated
+	if !strings.Contains(string(content), "tasks prime") {
+		t.Error("Task Tracking section should have new content")
+	}
+}
+
+func TestReplaceTaskTrackingSection(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  string
+		snippet  string
+		expected string
+	}{
+		{
+			name:     "section at end",
+			content:  "# Project\n\n## Task Tracking\n\nOld stuff.\n",
+			snippet:  "## Task Tracking\n\nNew stuff.\n",
+			expected: "# Project\n\n## Task Tracking\n\nNew stuff.\n",
+		},
+		{
+			name:     "section in middle",
+			content:  "# Project\n\n## Task Tracking\n\nOld.\n\n## Other\n\nKeep this.\n",
+			snippet:  "## Task Tracking\n\nNew.\n",
+			expected: "# Project\n\n## Task Tracking\n\nNew.\n\n## Other\n\nKeep this.\n",
+		},
+		{
+			name:     "section only",
+			content:  "## Task Tracking\n\nOld.\n",
+			snippet:  "## Task Tracking\n\nNew.\n",
+			expected: "## Task Tracking\n\nNew.\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := replaceTaskTrackingSection(tt.content, tt.snippet)
+			if result != tt.expected {
+				t.Errorf("got:\n%q\nwant:\n%q", result, tt.expected)
+			}
+		})
 	}
 }

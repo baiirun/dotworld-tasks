@@ -74,3 +74,11 @@ type Dep struct {
 	ItemID    string
 	DependsOn string
 }
+
+// Project represents a named project that groups related items.
+type Project struct {
+	Name        string
+	Description string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}

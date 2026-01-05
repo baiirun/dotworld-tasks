@@ -40,6 +40,13 @@ CREATE TABLE IF NOT EXISTS logs (
 	created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS projects (
+	name TEXT PRIMARY KEY,
+	description TEXT,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_items_project ON items(project);
 CREATE INDEX IF NOT EXISTS idx_items_status ON items(status);
 CREATE INDEX IF NOT EXISTS idx_items_parent ON items(parent_id);
@@ -82,11 +89,28 @@ func Open(path string) (*DB, error) {
 	return &DB{db}, nil
 }
 
-// Init creates the schema
+// Init creates the schema and migrates existing data.
 func (db *DB) Init() error {
 	_, err := db.Exec(schema)
 	if err != nil {
 		return fmt.Errorf("failed to create schema: %w", err)
 	}
+
+	// Migrate existing projects from items table
+	if err := db.migrateProjects(); err != nil {
+		return fmt.Errorf("failed to migrate projects: %w", err)
+	}
+
 	return nil
+}
+
+// migrateProjects populates the projects table from existing items.
+func (db *DB) migrateProjects() error {
+	_, err := db.Exec(`
+		INSERT OR IGNORE INTO projects (name, created_at, updated_at)
+		SELECT DISTINCT project, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+		FROM items
+		WHERE project != ''
+	`)
+	return err
 }

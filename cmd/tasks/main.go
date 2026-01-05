@@ -12,11 +12,12 @@ import (
 )
 
 var (
-	flagProject  string
-	flagStatus   string
-	flagEpic     bool
-	flagPriority int
+	flagProject   string
+	flagStatus    string
+	flagEpic      bool
+	flagPriority  int
 	flagDependsOn string
+	flagForce     bool
 )
 
 func openDB() (*db.DB, error) {
@@ -548,13 +549,14 @@ var onboardCmd = &cobra.Command{
 	Long: `Write tasks workflow snippet to CLAUDE.md in the current directory.
 
 Creates CLAUDE.md if it doesn't exist. Appends the tasks section if the file
-exists but doesn't have it. Skips if already onboarded.
+exists but doesn't have it. Skips if already onboarded (use --force to update).
 
 Example:
   cd ~/code/myproject
-  tasks onboard`,
+  tasks onboard
+  tasks onboard --force  # Update existing Task Tracking section`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runOnboard()
+		return runOnboard(flagForce)
 	},
 }
 
@@ -574,7 +576,7 @@ func findClaudeMD() string {
 	return "CLAUDE.md"
 }
 
-func runOnboard() error {
+func runOnboard(force bool) error {
 	claudePath := findClaudeMD()
 	snippet := `## Task Tracking
 
@@ -609,7 +611,17 @@ For full workflow: ` + "`tasks prime`" + `
 
 	// Check if already onboarded
 	if strings.Contains(string(content), "## Task Tracking") {
-		fmt.Println("Already onboarded (found '## Task Tracking' section)")
+		if !force {
+			fmt.Println("Already onboarded (found '## Task Tracking' section)")
+			fmt.Println("Use --force to update the section")
+			return nil
+		}
+		// Replace existing section
+		newContent := replaceTaskTrackingSection(string(content), snippet)
+		if err := os.WriteFile(claudePath, []byte(newContent), 0644); err != nil {
+			return fmt.Errorf("failed to update %s: %w", claudePath, err)
+		}
+		fmt.Printf("Updated Task Tracking section in %s\n", claudePath)
 		return nil
 	}
 
@@ -625,6 +637,55 @@ For full workflow: ` + "`tasks prime`" + `
 	}
 	fmt.Printf("Added tasks integration to %s\n", claudePath)
 	return nil
+}
+
+// replaceTaskTrackingSection finds the "## Task Tracking" section and replaces it
+// with the new snippet. The section ends at the next heading (# or ##) or EOF.
+func replaceTaskTrackingSection(content, snippet string) string {
+	// Find where "## Task Tracking" starts
+	startIdx := strings.Index(content, "## Task Tracking")
+	if startIdx == -1 {
+		return content
+	}
+
+	// Find where the section ends (next heading or EOF)
+	rest := content[startIdx+len("## Task Tracking"):]
+	endIdx := -1
+
+	// Look for next heading (line starting with #)
+	lines := strings.Split(rest, "\n")
+	charCount := 0
+	for i, line := range lines {
+		if i > 0 && len(line) > 0 && line[0] == '#' {
+			endIdx = startIdx + len("## Task Tracking") + charCount
+			break
+		}
+		charCount += len(line) + 1 // +1 for newline
+	}
+
+	// Build new content
+	before := content[:startIdx]
+	var after string
+	if endIdx == -1 {
+		// Section goes to EOF
+		after = ""
+	} else {
+		after = content[endIdx:]
+	}
+
+	// Ensure proper spacing
+	result := strings.TrimRight(before, "\n")
+	if result != "" {
+		result += "\n\n"
+	}
+	result += strings.TrimRight(snippet, "\n")
+	if after != "" {
+		result += "\n\n" + strings.TrimLeft(after, "\n")
+	} else {
+		result += "\n"
+	}
+
+	return result
 }
 
 var primeCmd = &cobra.Command{
@@ -668,6 +729,9 @@ func init() {
 
 	// dep flags
 	depCmd.Flags().StringVar(&flagDependsOn, "on", "", "ID of the item this depends on")
+
+	// onboard flags
+	onboardCmd.Flags().BoolVar(&flagForce, "force", false, "Replace existing Task Tracking section")
 
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
@@ -831,14 +895,21 @@ Before ending ANY session, you MUST complete ALL of these steps:
 1. Log progress on active tasks:
    tasks log <id> "What you accomplished"
 
-2. Update task status:
+2. Verify artifacts are updated:
+   - If you changed behavior: is help text / CLI output updated?
+   - If you added features: is documentation current?
+   - If you fixed bugs: do error messages reflect the fix?
+   - Do new tests need to be written? Do existing tests need updating?
+   Run the relevant commands to confirm outputs match the code.
+
+3. Update task status:
    - tasks done <id>     # if complete
    - tasks block <id> "reason"  # if blocked
 
-3. Add handoff context for next agent:
+4. Add handoff context for next agent:
    tasks append <id> "Next steps: ..."
 
-4. Update parent epic (if task is part of one):
+5. Update parent epic (if task is part of one):
    tasks append <epic-id> "Completed X, next: Y"
 
 NEVER end a session without updating task state.
