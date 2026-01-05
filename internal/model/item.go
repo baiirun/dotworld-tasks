@@ -1,6 +1,25 @@
 package model
 
-import "time"
+import (
+	"crypto/rand"
+	"encoding/hex"
+	"time"
+)
+
+// GenerateID returns a new ID with a type-specific prefix and 6 hex chars.
+//
+// Prefixes by item type:
+//   - task: "ts-" (e.g., ts-a1b2c3)
+//   - epic: "ep-" (e.g., ep-a1b2c3)
+func GenerateID(itemType ItemType) string {
+	prefix := "ts-"
+	if itemType == ItemTypeEpic {
+		prefix = "ep-"
+	}
+	b := make([]byte, 3)
+	rand.Read(b)
+	return prefix + hex.EncodeToString(b)
+}
 
 type ItemType string
 
@@ -8,6 +27,10 @@ const (
 	ItemTypeTask ItemType = "task"
 	ItemTypeEpic ItemType = "epic"
 )
+
+func (t ItemType) IsValid() bool {
+	return t == ItemTypeTask || t == ItemTypeEpic
+}
 
 type Status string
 
@@ -17,6 +40,10 @@ const (
 	StatusBlocked    Status = "blocked"
 	StatusDone       Status = "done"
 )
+
+func (s Status) IsValid() bool {
+	return s == StatusOpen || s == StatusInProgress || s == StatusBlocked || s == StatusDone
+}
 
 type Item struct {
 	ID          string
