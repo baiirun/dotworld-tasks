@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/baiirun/dotworld-tasks/internal/db"
-	"github.com/baiirun/dotworld-tasks/internal/model"
+	"github.com/baiirun/prog/internal/db"
+	"github.com/baiirun/prog/internal/model"
 )
 
 func captureOutput(f func()) string {
@@ -34,7 +34,7 @@ func TestPrintPrimeContent_NilReport(t *testing.T) {
 	})
 
 	// Should contain core sections
-	if !strings.Contains(output, "# Tasks CLI Context") {
+	if !strings.Contains(output, "# Prog CLI Context") {
 		t.Error("missing header")
 	}
 	if !strings.Contains(output, "SESSION CLOSE PROTOCOL") {
@@ -149,15 +149,15 @@ func TestPrintPrimeContent_EssentialCommands(t *testing.T) {
 
 	// Should contain key commands
 	commands := []string{
-		"tasks status",
-		"tasks ready",
-		"tasks show",
-		"tasks start",
-		"tasks log",
-		"tasks done",
-		"tasks cancel",
-		"tasks block",
-		"tasks add",
+		"prog status",
+		"prog ready",
+		"prog show",
+		"prog start",
+		"prog log",
+		"prog done",
+		"prog cancel",
+		"prog block",
+		"prog add",
 	}
 
 	for _, cmd := range commands {

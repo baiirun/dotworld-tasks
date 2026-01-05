@@ -1,8 +1,8 @@
 version: 2
 
 builds:
-  - main: ./cmd/tasks
-    binary: tasks
+  - main: ./cmd/prog
+    binary: prog
     goos:
       - linux
       - darwin
@@ -26,17 +26,17 @@ changelog:
 release:
   github:
     owner: baiirun
-    name: dotworld-tasks
+    name: prog
 
 brews:
-  - name: tasks
+  - name: prog
     repository:
       owner: baiirun
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
-    homepage: "https://github.com/baiirun/dotworld-tasks"
+    homepage: "https://github.com/baiirun/prog"
     description: "Cross-session task management CLI for AI agents"
     license: "MIT"
     install: |
-      bin.install "tasks"
+      bin.install "prog"

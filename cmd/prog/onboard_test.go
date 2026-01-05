@@ -38,11 +38,11 @@ func TestOnboard_CreatesNewFile(t *testing.T) {
 	if !strings.Contains(string(content), "## Task Tracking") {
 		t.Error("missing '## Task Tracking' header")
 	}
-	if !strings.Contains(string(content), "tasks prime") {
-		t.Error("missing 'tasks prime' reference")
+	if !strings.Contains(string(content), "prog prime") {
+		t.Error("missing 'prog prime' reference")
 	}
-	if !strings.Contains(string(content), "tasks ready") {
-		t.Error("missing 'tasks ready' command")
+	if !strings.Contains(string(content), "prog ready") {
+		t.Error("missing 'prog ready' command")
 	}
 }
 
@@ -69,8 +69,8 @@ func TestOnboard_AppendsToExisting(t *testing.T) {
 	})
 
 	// Check output message includes filename
-	if !strings.Contains(output, "Added tasks integration to CLAUDE.md") {
-		t.Errorf("expected 'Added tasks integration to CLAUDE.md' message, got: %s", output)
+	if !strings.Contains(output, "Added prog integration to CLAUDE.md") {
+		t.Errorf("expected 'Added prog integration to CLAUDE.md' message, got: %s", output)
 	}
 
 	// Check file has both old and new content
@@ -102,7 +102,7 @@ func TestOnboard_Idempotent(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(settingsPath), 0755); err != nil {
 		t.Fatalf("failed to create settings dir: %v", err)
 	}
-	existingSettings := `{"hooks":{"SessionStart":[{"matcher":"","hooks":[{"type":"command","command":"tasks prime"}]}]}}`
+	existingSettings := `{"hooks":{"SessionStart":[{"matcher":"","hooks":[{"type":"command","command":"prog prime"}]}]}}`
 	if err := os.WriteFile(settingsPath, []byte(existingSettings), 0644); err != nil {
 		t.Fatalf("failed to write existing settings.json: %v", err)
 	}
@@ -206,12 +206,12 @@ func TestOnboard_SnippetContent(t *testing.T) {
 
 	// Check all key commands are present
 	commands := []string{
-		"tasks ready",
-		"tasks add",
-		"tasks start",
-		"tasks log",
-		"tasks done",
-		"tasks prime",
+		"prog ready",
+		"prog add",
+		"prog start",
+		"prog log",
+		"prog done",
+		"prog prime",
 	}
 
 	for _, cmd := range commands {
@@ -257,7 +257,7 @@ func TestOnboard_ForceReplacesSection(t *testing.T) {
 	if strings.Contains(string(content), "Old instructions here") {
 		t.Error("old content should have been replaced")
 	}
-	if !strings.Contains(string(content), "tasks prime") {
+	if !strings.Contains(string(content), "prog prime") {
 		t.Error("should have new snippet content")
 	}
 	if !strings.Contains(string(content), "# My Project") {
@@ -309,7 +309,7 @@ This should be preserved.
 		t.Error("content after Task Tracking should be preserved")
 	}
 	// Check Task Tracking was updated
-	if !strings.Contains(string(content), "tasks prime") {
+	if !strings.Contains(string(content), "prog prime") {
 		t.Error("Task Tracking section should have new content")
 	}
 }
@@ -395,8 +395,8 @@ func TestInstallSessionStartHook_CreatesSettings(t *testing.T) {
 	if hook.Type != "command" {
 		t.Errorf("expected type 'command', got %q", hook.Type)
 	}
-	if hook.Command != "tasks prime" {
-		t.Errorf("expected command 'tasks prime', got %q", hook.Command)
+	if hook.Command != "prog prime" {
+		t.Errorf("expected command 'prog prime', got %q", hook.Command)
 	}
 }
 
@@ -524,7 +524,7 @@ func TestInstallSessionStartHook_MergesWithExisting(t *testing.T) {
 		if h.Command == "bd prime" {
 			foundBdPrime = true
 		}
-		if h.Command == "tasks prime" {
+		if h.Command == "prog prime" {
 			foundTasksPrime = true
 		}
 	}
@@ -533,7 +533,7 @@ func TestInstallSessionStartHook_MergesWithExisting(t *testing.T) {
 		t.Error("lost existing 'bd prime' hook")
 	}
 	if !foundTasksPrime {
-		t.Error("missing 'tasks prime' hook")
+		t.Error("missing 'prog prime' hook")
 	}
 
 	// Check PreCompact is preserved
@@ -552,7 +552,7 @@ func TestInstallSessionStartHook_AlreadyExists(t *testing.T) {
 	settingsDir := filepath.Join(dir, ".claude")
 	settingsPath := filepath.Join(settingsDir, "settings.json")
 
-	// Create settings with tasks prime already installed
+	// Create settings with prog prime already installed
 	if err := os.MkdirAll(settingsDir, 0755); err != nil {
 		t.Fatalf("failed to create settings dir: %v", err)
 	}
@@ -563,7 +563,7 @@ func TestInstallSessionStartHook_AlreadyExists(t *testing.T) {
 				{
 					Matcher: "",
 					Hooks: []Hook{
-						{Type: "command", Command: "tasks prime"},
+						{Type: "command", Command: "prog prime"},
 					},
 				},
 			},
@@ -614,7 +614,7 @@ func TestOnboard_InstallsHook(t *testing.T) {
 		t.Fatalf("failed to read settings.json: %v", err)
 	}
 
-	if !strings.Contains(string(content), "tasks prime") {
-		t.Error("settings.json should contain 'tasks prime' command")
+	if !strings.Contains(string(content), "prog prime") {
+		t.Error("settings.json should contain 'prog prime' command")
 	}
 }

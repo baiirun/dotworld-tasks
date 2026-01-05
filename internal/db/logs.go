@@ -3,7 +3,7 @@ package db
 import (
 	"fmt"
 
-	"github.com/baiirun/dotworld-tasks/internal/model"
+	"github.com/baiirun/prog/internal/model"
 )
 
 // AddLog adds a log entry to an item.

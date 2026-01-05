@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/baiirun/dotworld-tasks/internal/db"
-	"github.com/baiirun/dotworld-tasks/internal/model"
+	"github.com/baiirun/prog/internal/db"
+	"github.com/baiirun/prog/internal/model"
 )
 
 func TestAddCmd_ParentFlag(t *testing.T) {

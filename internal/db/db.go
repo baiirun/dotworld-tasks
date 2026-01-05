@@ -1,6 +1,6 @@
-// Package db provides SQLite database operations for the tasks system.
+// Package db provides SQLite database operations for the prog task system.
 //
-// The database is stored at ~/.world/tasks/tasks.db by default.
+// The database is stored at ~/.prog/prog.db by default.
 // Use Open() to connect and Init() to create the schema.
 package db
 
@@ -58,13 +58,13 @@ type DB struct {
 	*sql.DB
 }
 
-// DefaultPath returns the default database path (~/.world/tasks/tasks.db)
+// DefaultPath returns the default database path (~/.prog/prog.db)
 func DefaultPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get home directory: %w", err)
 	}
-	return filepath.Join(home, ".world", "tasks", "tasks.db"), nil
+	return filepath.Join(home, ".prog", "prog.db"), nil
 }
 
 // Open opens or creates the database at the given path

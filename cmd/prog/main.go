@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/baiirun/dotworld-tasks/internal/db"
-	"github.com/baiirun/dotworld-tasks/internal/model"
+	"github.com/baiirun/prog/internal/db"
+	"github.com/baiirun/prog/internal/model"
 	"github.com/spf13/cobra"
 )
 
@@ -55,32 +55,32 @@ func openDB() (*db.DB, error) {
 	}
 	database, err := db.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("%w (try running 'tasks init' first)", err)
+		return nil, fmt.Errorf("%w (try running 'prog init' first)", err)
 	}
 	return database, nil
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "tasks",
+	Use:   "prog",
 	Short: "Lightweight task management for agents",
 	Long: `A CLI for managing tasks, epics, and dependencies.
 Designed for AI agents to track work across sessions.
 
-Database: ~/.world/tasks/tasks.db
+Database: ~/.prog/prog.db
 
 Quick start:
-  tasks init
-  tasks onboard
-  tasks add "Build feature X" -p myproject
-  tasks ready -p myproject
-  tasks start <id>
-  tasks done <id>`,
+  prog init
+  prog onboard
+  prog add "Build feature X" -p myproject
+  prog ready -p myproject
+  prog start <id>
+  prog done <id>`,
 }
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Initialize the tasks database",
-	Long:  "Creates the database at ~/.world/tasks/tasks.db if it doesn't exist.",
+	Short: "Initialize the prog database",
+	Long:  "Creates the database at ~/.prog/prog.db if it doesn't exist.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path, err := db.DefaultPath()
 		if err != nil {
@@ -95,8 +95,8 @@ var initCmd = &cobra.Command{
 		if err := database.Init(); err != nil {
 			return err
 		}
-		fmt.Printf("Initialized tasks database at %s\n", path)
-		fmt.Println("\nNext: run 'tasks onboard' to set up Claude Code integration")
+		fmt.Printf("Initialized prog database at %s\n", path)
+		fmt.Println("\nNext: run 'prog onboard' to set up Claude Code integration")
 		return nil
 	},
 }
@@ -109,11 +109,11 @@ var addCmd = &cobra.Command{
 Returns the generated ID (ts-XXXXXX for tasks, ep-XXXXXX for epics).
 
 Examples:
-  tasks add "Fix login bug" -p myproject
-  tasks add "Auth system" -p myproject -e
-  tasks add "Critical fix" --priority 1
-  tasks add "Subtask" --parent ep-abc123
-  tasks add "Dependency" --blocks ts-xyz789`,
+  prog add "Fix login bug" -p myproject
+  prog add "Auth system" -p myproject -e
+  prog add "Critical fix" --priority 1
+  prog add "Subtask" --parent ep-abc123
+  prog add "Dependency" --blocks ts-xyz789`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
@@ -169,16 +169,16 @@ var listCmd = &cobra.Command{
 	Long: `List all tasks, optionally filtered by various criteria.
 
 Examples:
-  tasks list
-  tasks list -p myproject
-  tasks list --status open
-  tasks list -p myproject --status blocked
-  tasks list --parent ep-abc123
-  tasks list --type epic
-  tasks list --blocking ts-xyz789
-  tasks list --blocked-by ts-abc123
-  tasks list --has-blockers
-  tasks list --no-blockers`,
+  prog list
+  prog list -p myproject
+  prog list --status open
+  prog list -p myproject --status blocked
+  prog list --parent ep-abc123
+  prog list --type epic
+  prog list --blocking ts-xyz789
+  prog list --blocked-by ts-abc123
+  prog list --has-blockers
+  prog list --no-blockers`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
 		if err != nil {
@@ -228,8 +228,8 @@ A task is "ready" when:
 Results are sorted by priority (1=high first).
 
 Examples:
-  tasks ready
-  tasks ready -p myproject`,
+  prog ready
+  prog ready -p myproject`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
 		if err != nil {
@@ -257,7 +257,7 @@ var showCmd = &cobra.Command{
 	Long: `Show full details for a task including description, logs, and dependencies.
 
 Example:
-  tasks show ts-a1b2c3`,
+  prog show ts-a1b2c3`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
@@ -333,8 +333,8 @@ Use this instead of delete when you want to preserve the task history
 but close it without marking it as successfully completed.
 
 Example:
-  tasks cancel ts-a1b2c3
-  tasks cancel ts-a1b2c3 "Requirements changed, no longer needed"`,
+  prog cancel ts-a1b2c3
+  prog cancel ts-a1b2c3 "Requirements changed, no longer needed"`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
@@ -370,7 +370,7 @@ var blockCmd = &cobra.Command{
 Use this when you can't proceed and need to hand off to another agent.
 
 Example:
-  tasks block ts-a1b2c3 "Need API spec from product team"`,
+  prog block ts-a1b2c3 "Need API spec from product team"`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
@@ -402,7 +402,7 @@ This removes the item, its logs, and any dependencies.
 This action cannot be undone.
 
 Example:
-  tasks delete ts-a1b2c3`,
+  prog delete ts-a1b2c3`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
@@ -427,7 +427,7 @@ var logCmd = &cobra.Command{
 Use this to track progress while working.
 
 Example:
-  tasks log ts-a1b2c3 "Implemented token refresh logic"`,
+  prog log ts-a1b2c3 "Implemented token refresh logic"`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
@@ -455,8 +455,8 @@ var graphCmd = &cobra.Command{
 Displays which tasks are blocked by other tasks.
 
 Examples:
-  tasks graph
-  tasks graph -p myproject`,
+  prog graph
+  prog graph -p myproject`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
 		if err != nil {
@@ -520,8 +520,8 @@ Includes:
   - Ready tasks by priority
 
 Examples:
-  tasks status
-  tasks status -p myproject`,
+  prog status
+  prog status -p myproject`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
 		if err != nil {
@@ -547,7 +547,7 @@ var appendCmd = &cobra.Command{
 Use this to add context, decisions, or handoff notes.
 
 Example:
-  tasks append ts-a1b2c3 "Decided to use JWT instead of sessions"`,
+  prog append ts-a1b2c3 "Decided to use JWT instead of sessions"`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
@@ -569,15 +569,15 @@ Example:
 
 var editCmd = &cobra.Command{
 	Use:   "edit <id>",
-	Short: "Edit a task's description in $TASKS_EDITOR",
+	Short: "Edit a task's description in $PROG_EDITOR",
 	Long: `Open a task's description in your configured editor.
 
-Uses $TASKS_EDITOR if set, otherwise defaults to nvim, then nano, then vi.
+Uses $PROG_EDITOR if set, otherwise defaults to nvim, then nano, then vi.
 After saving and closing, the description is updated.
 
 Example:
-  tasks edit ts-a1b2c3
-  TASKS_EDITOR=code tasks edit ts-a1b2c3`,
+  prog edit ts-a1b2c3
+  PROG_EDITOR=code prog edit ts-a1b2c3`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
@@ -594,8 +594,8 @@ Example:
 			return err
 		}
 
-		// Get editor (prefer $TASKS_EDITOR, then nvim, then nano)
-		editor := os.Getenv("TASKS_EDITOR")
+		// Get editor (prefer $PROG_EDITOR, then nvim, then nano)
+		editor := os.Getenv("PROG_EDITOR")
 		if editor == "" {
 			if _, err := exec.LookPath("nvim"); err == nil {
 				editor = "nvim"
@@ -607,7 +607,7 @@ Example:
 		}
 
 		// Create temp file
-		tmpfile, err := os.CreateTemp("", "tasks-edit-*.md")
+		tmpfile, err := os.CreateTemp("", "prog-edit-*.md")
 		if err != nil {
 			return fmt.Errorf("failed to create temp file: %w", err)
 		}
@@ -673,10 +673,10 @@ var descCmd = &cobra.Command{
 	Long: `Replace a task's entire description with new text.
 
 Use this when you need to rewrite or fix the description content.
-For adding to existing content, use 'tasks append' instead.
+For adding to existing content, use 'prog append' instead.
 
 Example:
-  tasks desc ts-a1b2c3 "New description text here"`,
+  prog desc ts-a1b2c3 "New description text here"`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
@@ -705,7 +705,7 @@ This establishes a hierarchical relationship where tasks belong to epics.
 The parent must be an epic (created with -e flag).
 
 Example:
-  tasks parent ts-a1b2c3 ep-d4e5f6
+  prog parent ts-a1b2c3 ep-d4e5f6
   # ts-a1b2c3 is now a child of ep-d4e5f6`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -731,7 +731,7 @@ var blocksCmd = &cobra.Command{
 The second task cannot be started until the first is done.
 
 Example:
-  tasks blocks ts-a1b2c3 ts-d4e5f6
+  prog blocks ts-a1b2c3 ts-d4e5f6
   # ts-d4e5f6 cannot start until ts-a1b2c3 is done`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -752,26 +752,26 @@ Example:
 
 var onboardCmd = &cobra.Command{
 	Use:   "onboard",
-	Short: "Set up tasks integration for AI agents",
-	Long: `Set up tasks integration for AI agents.
+	Short: "Set up prog integration for AI agents",
+	Long: `Set up prog integration for AI agents.
 
 Designed for Claude Code but provides guidance for other agents.
 
 For Claude Code, this command:
-1. Writes a tasks workflow snippet to CLAUDE.md in the current directory
-2. Installs a SessionStart hook in ~/.claude/settings.json to auto-run 'tasks prime'
+1. Writes a prog workflow snippet to CLAUDE.md in the current directory
+2. Installs a SessionStart hook in ~/.claude/settings.json to auto-run 'prog prime'
 
 For other agents (Cursor, Opencode, Droid, Codex, Gemini, etc.):
 - Copy the Task Tracking snippet to your agent's instruction file
-- If hooks are available, add 'tasks prime' to session start
-- Otherwise, run 'tasks prime' and paste output into agent context
+- If hooks are available, add 'prog prime' to session start
+- Otherwise, run 'prog prime' and paste output into agent context
 
 Creates files if they don't exist. Skips if already configured (use --force to update).
 
 Example:
   cd ~/code/myproject
-  tasks onboard
-  tasks onboard --force  # Update existing configuration`,
+  prog onboard
+  prog onboard --force  # Update existing configuration`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runOnboard(flagForce)
 	},
@@ -801,19 +801,19 @@ func runOnboardWithSettings(force bool, settingsPath string) error {
 	claudePath := findClaudeMD()
 	snippet := `## Task Tracking
 
-This project uses **tasks** for cross-session task management.
-Run ` + "`tasks prime`" + ` for workflow context, or configure hooks for auto-injection.
+This project uses **prog** for cross-session task management.
+Run ` + "`prog prime`" + ` for workflow context, or configure hooks for auto-injection.
 
 **Quick reference:**
 ` + "```" + `
-tasks ready              # Find unblocked work
-tasks add "Title" -p X   # Create task
-tasks start <id>         # Claim work
-tasks log <id> "msg"     # Log progress
-tasks done <id>          # Complete work
+prog ready              # Find unblocked work
+prog add "Title" -p X   # Create task
+prog start <id>         # Claim work
+prog log <id> "msg"     # Log progress
+prog done <id>          # Complete work
 ` + "```" + `
 
-For full workflow: ` + "`tasks prime`" + `
+For full workflow: ` + "`prog prime`" + `
 `
 
 	var claudeMDUpdated bool
@@ -826,7 +826,7 @@ For full workflow: ` + "`tasks prime`" + `
 			if err := os.WriteFile(claudePath, []byte(snippet), 0644); err != nil {
 				return fmt.Errorf("failed to create CLAUDE.md: %w", err)
 			}
-			fmt.Println("Created CLAUDE.md with tasks integration")
+			fmt.Println("Created CLAUDE.md with prog integration")
 			claudeMDUpdated = true
 		} else {
 			return fmt.Errorf("failed to read CLAUDE.md: %w", err)
@@ -856,7 +856,7 @@ For full workflow: ` + "`tasks prime`" + `
 			if err := os.WriteFile(claudePath, []byte(newContent), 0644); err != nil {
 				return fmt.Errorf("failed to update %s: %w", claudePath, err)
 			}
-			fmt.Printf("Added tasks integration to %s\n", claudePath)
+			fmt.Printf("Added prog integration to %s\n", claudePath)
 			claudeMDUpdated = true
 		}
 	}
@@ -882,8 +882,8 @@ For full workflow: ` + "`tasks prime`" + `
 	fmt.Println("Note: This assumes Claude Code. For other agents:")
 	fmt.Println("  1. Update your agent's instruction file (AGENTS.md, .cursorrules, etc.)")
 	fmt.Println("     with the Task Tracking section above")
-	fmt.Println("  2. If your tool supports hooks, add 'tasks prime' to session start")
-	fmt.Println("  3. If no hooks, run 'tasks prime' and paste output into agent context")
+	fmt.Println("  2. If your tool supports hooks, add 'prog prime' to session start")
+	fmt.Println("  3. If no hooks, run 'prog prime' and paste output into agent context")
 
 	return nil
 }
@@ -937,7 +937,7 @@ func replaceTaskTrackingSection(content, snippet string) string {
 	return result
 }
 
-// installSessionStartHook installs "tasks prime" in ~/.claude/settings.json
+// installSessionStartHook installs "prog prime" in ~/.claude/settings.json
 // Returns true if hook was added, false if already present
 func installSessionStartHook(settingsPath string) (bool, error) {
 	// Default to ~/.claude/settings.json if not specified
@@ -970,7 +970,7 @@ func installSessionStartHook(settingsPath string) (bool, error) {
 	}
 
 	// Check if hook already exists
-	const hookCommand = "tasks prime"
+	const hookCommand = "prog prime"
 	for _, matcher := range settings.Hooks["SessionStart"] {
 		for _, hook := range matcher.Hooks {
 			if hook.Command == hookCommand {
@@ -1027,12 +1027,12 @@ var primeCmd = &cobra.Command{
 	Long: `Output essential workflow context for AI agents.
 
 Designed to run on SessionStart and PreCompact hooks to ensure
-agents maintain context about the tasks workflow.
+agents maintain context about the prog workflow.
 
 Example hook configuration in Claude Code settings:
   "hooks": {
-    "SessionStart": [{"command": "tasks prime"}],
-    "PreCompact": [{"command": "tasks prime"}]
+    "SessionStart": [{"command": "prog prime"}],
+    "PreCompact": [{"command": "prog prime"}]
   }`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
@@ -1223,17 +1223,17 @@ func printDepGraph(edges []db.DepEdge) {
 }
 
 func printPrimeContent(report *db.StatusReport) {
-	fmt.Println(`# Tasks CLI Context
+	fmt.Println(`# Prog CLI Context
 
-This project uses 'tasks' for cross-session task management.
-Run 'tasks status' to see current state.
+This project uses 'prog' for cross-session task management.
+Run 'prog status' to see current state.
 
 ## SESSION CLOSE PROTOCOL
 
 Before ending ANY session, you MUST complete ALL of these steps:
 
 1. Log progress on active tasks:
-   tasks log <id> "What you accomplished"
+   prog log <id> "What you accomplished"
 
 2. Verify artifacts are updated:
    - If you changed behavior: is help text / CLI output updated?
@@ -1243,64 +1243,64 @@ Before ending ANY session, you MUST complete ALL of these steps:
    Run the relevant commands to confirm outputs match the code.
 
 3. Update task status:
-   - tasks done <id>     # if complete
-   - tasks block <id> "reason"  # if blocked
+   - prog done <id>     # if complete
+   - prog block <id> "reason"  # if blocked
 
 4. Add handoff context for next agent:
-   tasks append <id> "Next steps: ..."
+   prog append <id> "Next steps: ..."
 
 5. Update parent epic (if task is part of one):
-   tasks append <epic-id> "Completed X, next: Y"
+   prog append <epic-id> "Completed X, next: Y"
 
 NEVER end a session without updating task state.
-Work is NOT complete until tasks reflect reality.
+Work is NOT complete until prog reflects reality.
 
 ## Core Rules
 
-- Use 'tasks' for strategic work tracking (persists across sessions)
+- Use 'prog' for strategic work tracking (persists across sessions)
 - Use TodoWrite for tactical within-session checklists
-- Always claim work before starting: tasks start <id>
+- Always claim work before starting: prog start <id>
 - Log progress frequently, not just at the end
 
 ## Essential Commands
 
 # Finding work
-tasks status              # Overview of all projects
-tasks ready               # Tasks ready to work on (deps satisfied)
-tasks show <id>           # Full details including logs
-tasks graph               # Show dependency tree
-tasks projects            # List all projects
+prog status              # Overview of all projects
+prog ready               # Tasks ready to work on (deps satisfied)
+prog show <id>           # Full details including logs
+prog graph               # Show dependency tree
+prog projects            # List all projects
 
-Resuming a session? If a task is already in_progress, use 'tasks show <id>'
+Resuming a session? If a task is already in_progress, use 'prog show <id>'
 to read its logs and understand current state before continuing.
 
 # Working
-tasks start <id>          # Claim a task
-tasks log <id> "message"  # Log progress
-tasks done <id>           # Mark complete
-tasks cancel <id> "why"   # Cancel (close without completing)
-tasks block <id> "why"    # Mark blocked
+prog start <id>          # Claim a task
+prog log <id> "message"  # Log progress
+prog done <id>           # Mark complete
+prog cancel <id> "why"   # Cancel (close without completing)
+prog block <id> "why"    # Mark blocked
 
 # Creating & organizing
-tasks add "title" -p project    # New task
-tasks add "title" -e            # New epic
-tasks add "title" --parent <epic-id>   # New task under epic
-tasks add "title" --blocks <id>        # New task that blocks id
-tasks parent <id> <epic-id>     # Set task's parent epic
-tasks blocks <id> <other>       # id blocks other (other can't start until id done)
+prog add "title" -p project    # New task
+prog add "title" -e            # New epic
+prog add "title" --parent <epic-id>   # New task under epic
+prog add "title" --blocks <id>        # New task that blocks id
+prog parent <id> <epic-id>     # Set task's parent epic
+prog blocks <id> <other>       # id blocks other (other can't start until id done)
 
 # Editing
-tasks append <id> "text"        # Add to description
-tasks desc <id> "text"          # Replace description
-tasks edit <id>                 # Edit description in $TASKS_EDITOR
+prog append <id> "text"        # Add to description
+prog desc <id> "text"          # Replace description
+prog edit <id>                 # Edit description in $PROG_EDITOR
 
-# Filtering (tasks list)
-tasks list --parent <epic-id>   # Tasks under an epic
-tasks list --type epic          # Only epics
-tasks list --blocking <id>      # What blocks this task?
-tasks list --blocked-by <id>    # What does this task block?
-tasks list --has-blockers       # Tasks with unresolved deps
-tasks list --no-blockers        # Tasks with no blockers
+# Filtering (prog list)
+prog list --parent <epic-id>   # Tasks under an epic
+prog list --type epic          # Only epics
+prog list --blocking <id>      # What blocks this task?
+prog list --blocked-by <id>    # What does this task block?
+prog list --has-blockers       # Tasks with unresolved deps
+prog list --no-blockers        # Tasks with no blockers
 
 ## Current State`)
 
@@ -1322,6 +1322,6 @@ tasks list --no-blockers        # Tasks with no blockers
 			}
 		}
 	} else {
-		fmt.Println("\n(No database connection - run 'tasks init' if needed)")
+		fmt.Println("\n(No database connection - run 'prog init' if needed)")
 	}
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/baiirun/dotworld-tasks/internal/model"
+	"github.com/baiirun/prog/internal/model"
 )
 
 // CreateItem inserts a new item into the database.

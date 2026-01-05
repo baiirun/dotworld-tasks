@@ -1,4 +1,4 @@
-module github.com/baiirun/dotworld-tasks
+module github.com/baiirun/prog
 
 go 1.25
 

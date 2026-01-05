@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/baiirun/dotworld-tasks/internal/model"
+	"github.com/baiirun/prog/internal/model"
 )
 
 func createTestItemWithProject(t *testing.T, db *DB, title, project string, status model.Status, priority int) *model.Item {

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/baiirun/dotworld-tasks/internal/model"
+	"github.com/baiirun/prog/internal/model"
 )
 
 func setupTestDB(t *testing.T) *DB {
@@ -53,8 +53,8 @@ func TestDefaultPath(t *testing.T) {
 		t.Errorf("expected absolute path, got %q", path)
 	}
 
-	if !contains(path, ".world/tasks/tasks.db") {
-		t.Errorf("expected path to contain .world/tasks/tasks.db, got %q", path)
+	if !contains(path, ".prog/prog.db") {
+		t.Errorf("expected path to contain .prog/prog.db, got %q", path)
 	}
 }
 

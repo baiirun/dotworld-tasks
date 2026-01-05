@@ -1,4 +1,4 @@
-# tasks
+# prog
 
 Lightweight task management for AI agents. SQLite-backed, CLI-driven.
 
@@ -7,7 +7,7 @@ Lightweight task management for AI agents. SQLite-backed, CLI-driven.
 ### Homebrew (macOS/Linux)
 
 ```bash
-brew install baiirun/tap/tasks
+brew install baiirun/tap/prog
 ```
 
 ### Go install
@@ -15,7 +15,7 @@ brew install baiirun/tap/tasks
 Requires Go 1.25+.
 
 ```bash
-go install github.com/baiirun/dotworld-tasks/cmd/tasks@latest
+go install github.com/baiirun/prog/cmd/prog@latest
 ```
 
 ### Build from source
@@ -23,45 +23,45 @@ go install github.com/baiirun/dotworld-tasks/cmd/tasks@latest
 Requires Go 1.25+.
 
 ```bash
-git clone https://github.com/baiirun/dotworld-tasks.git
-cd dotworld-tasks
-go build -o tasks ./cmd/tasks
-./tasks --help
+git clone https://github.com/baiirun/prog.git
+cd prog
+go build -o prog ./cmd/prog
+./prog --help
 ```
 
 Or install to your `$GOBIN`:
 
 ```bash
-git clone https://github.com/baiirun/dotworld-tasks.git
-cd dotworld-tasks
-go install ./cmd/tasks
-tasks --help
+git clone https://github.com/baiirun/prog.git
+cd prog
+go install ./cmd/prog
+prog --help
 ```
 
 ## Quick Start
 
 ```bash
-# Initialize database (creates ~/.world/tasks/tasks.db)
-tasks init
+# Initialize database (creates ~/.prog/prog.db)
+prog init
 
 # Set up Claude Code hooks (recommended)
-tasks onboard
+prog onboard
 
 # Create a task
-tasks add "Implement user authentication" -p myproject --priority 1
+prog add "Implement user authentication" -p myproject --priority 1
 # Output: ts-a1b2c3
 
 # See what's ready to work on
-tasks ready -p myproject
+prog ready -p myproject
 
 # Start working
-tasks start ts-a1b2c3
+prog start ts-a1b2c3
 
 # Log progress
-tasks log ts-a1b2c3 "Added JWT token generation"
+prog log ts-a1b2c3 "Added JWT token generation"
 
 # Mark complete
-tasks done ts-a1b2c3
+prog done ts-a1b2c3
 ```
 
 ## CLI Reference
@@ -70,37 +70,37 @@ tasks done ts-a1b2c3
 
 | Command | Description |
 |---------|-------------|
-| `tasks init` | Initialize the database |
-| `tasks onboard` | Set up tasks integration for AI agents |
-| `tasks add <title>` | Create a task (returns ID) |
-| `tasks list` | List all tasks |
-| `tasks show <id>` | Show task details, logs, and dependencies |
-| `tasks ready` | Show tasks ready for work (open + deps met) |
-| `tasks status` | Project overview for agent spin-up |
-| `tasks prime` | Output context for Claude Code hooks |
+| `prog init` | Initialize the database |
+| `prog onboard` | Set up prog integration for AI agents |
+| `prog add <title>` | Create a task (returns ID) |
+| `prog list` | List all tasks |
+| `prog show <id>` | Show task details, logs, and dependencies |
+| `prog ready` | Show tasks ready for work (open + deps met) |
+| `prog status` | Project overview for agent spin-up |
+| `prog prime` | Output context for Claude Code hooks |
 
 ### Work Commands
 
 | Command | Description |
 |---------|-------------|
-| `tasks start <id>` | Set task to in_progress |
-| `tasks done <id>` | Mark task complete |
-| `tasks cancel <id> [reason]` | Cancel task (close without completing) |
-| `tasks block <id> <reason>` | Mark blocked with reason |
-| `tasks log <id> <message>` | Add timestamped log entry |
-| `tasks append <id> <text>` | Append to task description |
-| `tasks desc <id> <text>` | Replace task description |
-| `tasks edit <id>` | Edit description in $TASKS_EDITOR (defaults to nvim, nano, vi) |
+| `prog start <id>` | Set task to in_progress |
+| `prog done <id>` | Mark task complete |
+| `prog cancel <id> [reason]` | Cancel task (close without completing) |
+| `prog block <id> <reason>` | Mark blocked with reason |
+| `prog log <id> <message>` | Add timestamped log entry |
+| `prog append <id> <text>` | Append to task description |
+| `prog desc <id> <text>` | Replace task description |
+| `prog edit <id>` | Edit description in $PROG_EDITOR (defaults to nvim, nano, vi) |
 
 ### Organization
 
 | Command | Description |
 |---------|-------------|
-| `tasks parent <id> <epic-id>` | Set task's parent epic |
-| `tasks blocks <id> <other>` | Add blocking relationship (other blocked until id done) |
-| `tasks graph` | Show dependency graph |
-| `tasks projects` | List all projects |
-| `tasks add -e <title>` | Create an epic instead of task |
+| `prog parent <id> <epic-id>` | Set task's parent epic |
+| `prog blocks <id> <other>` | Add blocking relationship (other blocked until id done) |
+| `prog graph` | Show dependency graph |
+| `prog projects` | List all projects |
+| `prog add -e <title>` | Create an epic instead of task |
 
 ### Flags
 
@@ -130,7 +130,7 @@ IDs are auto-generated with type prefixes:
 
 ```bash
 # Get project overview
-tasks status -p myproject
+prog status -p myproject
 
 # Output:
 # Project: myproject
@@ -149,62 +149,62 @@ tasks status -p myproject
 
 ```bash
 # See what's unblocked
-tasks ready -p myproject
+prog ready -p myproject
 
 # Read full context
-tasks show ts-d4e5f6
+prog show ts-d4e5f6
 
 # Claim it
-tasks start ts-d4e5f6
+prog start ts-d4e5f6
 ```
 
 ### While working
 
 ```bash
 # Log progress (timestamped audit trail)
-tasks log ts-d4e5f6 "Implemented POST /login"
-tasks log ts-d4e5f6 "Added rate limiting"
+prog log ts-d4e5f6 "Implemented POST /login"
+prog log ts-d4e5f6 "Added rate limiting"
 
 # Append to description with decisions/context
-tasks append ts-d4e5f6 "Using bcrypt for password hashing"
+prog append ts-d4e5f6 "Using bcrypt for password hashing"
 
 # Replace description entirely
-tasks desc ts-d4e5f6 "Implement login endpoint with JWT auth and rate limiting"
+prog desc ts-d4e5f6 "Implement login endpoint with JWT auth and rate limiting"
 
 # Or edit in your editor
-tasks edit ts-d4e5f6
+prog edit ts-d4e5f6
 ```
 
 ### Finish or hand off
 
 ```bash
 # Complete
-tasks done ts-d4e5f6
+prog done ts-d4e5f6
 
 # Or cancel if no longer needed
-tasks cancel ts-d4e5f6 "Requirements changed"
+prog cancel ts-d4e5f6 "Requirements changed"
 
 # Or mark blocked for next agent
-tasks block ts-d4e5f6 "Need API spec for OAuth flow"
+prog block ts-d4e5f6 "Need API spec for OAuth flow"
 
 # If task is part of an epic, update the epic too
-tasks append ep-a1b2c3 "Completed auth endpoint, next: write tests"
+prog append ep-a1b2c3 "Completed auth endpoint, next: write tests"
 ```
 
 ### Dependencies
 
-Use dependencies to enforce task ordering. A task with unmet dependencies won't appear in `tasks ready`.
+Use dependencies to enforce task ordering. A task with unmet dependencies won't appear in `prog ready`.
 
 ```bash
 # Create a task that blocks another (at creation time)
-tasks add "Build API" -p myproject --blocks ts-frontend
+prog add "Build API" -p myproject --blocks ts-frontend
 # New task blocks ts-frontend, so ts-frontend can't start until the new task is done
 
 # Or add blocking relationship to existing tasks
-tasks blocks ts-backend ts-frontend
+prog blocks ts-backend ts-frontend
 
 # View all dependencies
-tasks graph
+prog graph
 
 # Output:
 # ts-frontend [open] Build frontend components
@@ -219,52 +219,52 @@ Group related tasks under an epic for organization:
 
 ```bash
 # Create an epic
-tasks add "Authentication system" -p myproject -e
+prog add "Authentication system" -p myproject -e
 # Output: ep-a1b2c3
 
 # Create task under epic (at creation time)
-tasks add "Implement login" -p myproject --parent ep-a1b2c3
+prog add "Implement login" -p myproject --parent ep-a1b2c3
 
 # Or assign existing tasks to the epic
-tasks parent ts-d4e5f6 ep-a1b2c3
-tasks parent ts-g7h8i9 ep-a1b2c3
+prog parent ts-d4e5f6 ep-a1b2c3
+prog parent ts-g7h8i9 ep-a1b2c3
 
 # View task with parent
-tasks show ts-d4e5f6
+prog show ts-d4e5f6
 # Output includes: Parent: ep-a1b2c3
 ```
 
 ## Claude Code Integration
 
-The `tasks onboard` command configures Claude Code hooks to inject workflow context at session start and before context compaction. This ensures agents maintain context about the tasks workflow across sessions.
+The `prog onboard` command configures Claude Code hooks to inject workflow context at session start and before context compaction. This ensures agents maintain context about the prog workflow across sessions.
 
 **Using a different agent?** (Cursor, Opencode, Droid, Codex, Gemini, etc.)
 
 1. Copy the Task Tracking snippet from `CLAUDE.md` to your agent's instruction file (`.cursorrules`, `AGENTS.md`, etc.)
-2. If your tool supports hooks, add `tasks prime` to session start
-3. If no hooks, run `tasks prime` and paste output into agent context
+2. If your tool supports hooks, add `prog prime` to session start
+3. If no hooks, run `prog prime` and paste output into agent context
 
 ### Hook Configuration
 
-Running `tasks onboard` adds this to your Claude Code settings (`.claude/settings.json`):
+Running `prog onboard` adds this to your Claude Code settings (`.claude/settings.json`):
 
 ```json
 {
   "hooks": {
     "SessionStart": [
-      { "command": "tasks prime" }
+      { "command": "prog prime" }
     ],
     "PreCompact": [
-      { "command": "tasks prime" }
+      { "command": "prog prime" }
     ]
   }
 }
 ```
 
-### What `tasks prime` outputs
+### What `prog prime` outputs
 
 - **SESSION CLOSE PROTOCOL**: Mandatory checklist for logging progress and updating status before ending sessions
-- **Core Rules**: When to use `tasks` (strategic, cross-session) vs TodoWrite (tactical, within-session)
+- **Core Rules**: When to use `prog` (strategic, cross-session) vs TodoWrite (tactical, within-session)
 - **Essential Commands**: Quick reference grouped by workflow phase
 - **Current State**: Live summary of open, in-progress, and blocked tasks
 
@@ -278,7 +278,7 @@ This ensures agents never forget the workflow, even after context compaction.
 - **Logs**: Timestamped audit trail per item
 - **Projects**: String tag to scope work (e.g., "gaia", "myapp")
 
-Database location: `~/.world/tasks/tasks.db`
+Database location: `~/.prog/prog.db`
 
 ## Design
 
