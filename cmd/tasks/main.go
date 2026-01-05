@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -10,6 +12,24 @@ import (
 	"github.com/baiirun/dotworld-tasks/internal/model"
 	"github.com/spf13/cobra"
 )
+
+// ClaudeSettings represents ~/.claude/settings.json structure
+type ClaudeSettings struct {
+	Hooks          map[string][]HookMatcher `json:"hooks,omitempty"`
+	EnabledPlugins map[string]bool          `json:"enabledPlugins,omitempty"`
+}
+
+// HookMatcher represents a hook configuration with a matcher pattern
+type HookMatcher struct {
+	Matcher string `json:"matcher"`
+	Hooks   []Hook `json:"hooks"`
+}
+
+// Hook represents a single hook command
+type Hook struct {
+	Type    string `json:"type"`
+	Command string `json:"command"`
+}
 
 var (
 	flagProject   string
@@ -604,16 +624,19 @@ Example:
 
 var onboardCmd = &cobra.Command{
 	Use:   "onboard",
-	Short: "Add tasks integration to CLAUDE.md",
-	Long: `Write tasks workflow snippet to CLAUDE.md in the current directory.
+	Short: "Add tasks integration to CLAUDE.md and install SessionStart hook",
+	Long: `Set up tasks integration for Claude Code agents.
 
-Creates CLAUDE.md if it doesn't exist. Appends the tasks section if the file
-exists but doesn't have it. Skips if already onboarded (use --force to update).
+This command does two things:
+1. Writes a tasks workflow snippet to CLAUDE.md in the current directory
+2. Installs a SessionStart hook in ~/.claude/settings.json to auto-run 'tasks prime'
+
+Creates files if they don't exist. Skips if already configured (use --force to update).
 
 Example:
   cd ~/code/myproject
   tasks onboard
-  tasks onboard --force  # Update existing Task Tracking section`,
+  tasks onboard --force  # Update existing configuration`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runOnboard(flagForce)
 	},
@@ -636,6 +659,10 @@ func findClaudeMD() string {
 }
 
 func runOnboard(force bool) error {
+	return runOnboardWithSettings(force, "")
+}
+
+func runOnboardWithSettings(force bool, settingsPath string) error {
 	claudePath := findClaudeMD()
 	snippet := `## Task Tracking
 
@@ -654,6 +681,8 @@ tasks done <id>          # Complete work
 For full workflow: ` + "`tasks prime`" + `
 `
 
+	var claudeMDUpdated bool
+
 	// Check if file exists
 	content, err := os.ReadFile(claudePath)
 	if err != nil {
@@ -663,38 +692,56 @@ For full workflow: ` + "`tasks prime`" + `
 				return fmt.Errorf("failed to create CLAUDE.md: %w", err)
 			}
 			fmt.Println("Created CLAUDE.md with tasks integration")
-			return nil
+			claudeMDUpdated = true
+		} else {
+			return fmt.Errorf("failed to read CLAUDE.md: %w", err)
 		}
-		return fmt.Errorf("failed to read CLAUDE.md: %w", err)
+	} else {
+		// Check if already onboarded
+		if strings.Contains(string(content), "## Task Tracking") {
+			if !force {
+				fmt.Println("CLAUDE.md already has Task Tracking section")
+			} else {
+				// Replace existing section
+				newContent := replaceTaskTrackingSection(string(content), snippet)
+				if err := os.WriteFile(claudePath, []byte(newContent), 0644); err != nil {
+					return fmt.Errorf("failed to update %s: %w", claudePath, err)
+				}
+				fmt.Printf("Updated Task Tracking section in %s\n", claudePath)
+				claudeMDUpdated = true
+			}
+		} else {
+			// Append to existing file
+			newContent := string(content)
+			if !strings.HasSuffix(newContent, "\n") {
+				newContent += "\n"
+			}
+			newContent += "\n" + snippet
+
+			if err := os.WriteFile(claudePath, []byte(newContent), 0644); err != nil {
+				return fmt.Errorf("failed to update %s: %w", claudePath, err)
+			}
+			fmt.Printf("Added tasks integration to %s\n", claudePath)
+			claudeMDUpdated = true
+		}
 	}
 
-	// Check if already onboarded
-	if strings.Contains(string(content), "## Task Tracking") {
-		if !force {
-			fmt.Println("Already onboarded (found '## Task Tracking' section)")
-			fmt.Println("Use --force to update the section")
-			return nil
-		}
-		// Replace existing section
-		newContent := replaceTaskTrackingSection(string(content), snippet)
-		if err := os.WriteFile(claudePath, []byte(newContent), 0644); err != nil {
-			return fmt.Errorf("failed to update %s: %w", claudePath, err)
-		}
-		fmt.Printf("Updated Task Tracking section in %s\n", claudePath)
-		return nil
+	// Install SessionStart hook
+	hookAdded, err := installSessionStartHook(settingsPath)
+	if err != nil {
+		return fmt.Errorf("failed to install hook: %w", err)
 	}
 
-	// Append to existing file
-	newContent := string(content)
-	if !strings.HasSuffix(newContent, "\n") {
-		newContent += "\n"
+	if hookAdded {
+		fmt.Println("Installed SessionStart hook in ~/.claude/settings.json")
+	} else {
+		fmt.Println("SessionStart hook already installed")
 	}
-	newContent += "\n" + snippet
 
-	if err := os.WriteFile(claudePath, []byte(newContent), 0644); err != nil {
-		return fmt.Errorf("failed to update %s: %w", claudePath, err)
+	if !claudeMDUpdated && !hookAdded && !force {
+		fmt.Println("Use --force to update existing configuration")
 	}
-	fmt.Printf("Added tasks integration to %s\n", claudePath)
+
 	return nil
 }
 
@@ -745,6 +792,90 @@ func replaceTaskTrackingSection(content, snippet string) string {
 	}
 
 	return result
+}
+
+// installSessionStartHook installs "tasks prime" in ~/.claude/settings.json
+// Returns true if hook was added, false if already present
+func installSessionStartHook(settingsPath string) (bool, error) {
+	// Default to ~/.claude/settings.json if not specified
+	if settingsPath == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return false, fmt.Errorf("failed to get home directory: %w", err)
+		}
+		settingsPath = filepath.Join(home, ".claude", "settings.json")
+	}
+
+	// Read existing settings or create new
+	var settings ClaudeSettings
+	content, err := os.ReadFile(settingsPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return false, fmt.Errorf("failed to read settings: %w", err)
+		}
+		// File doesn't exist, start fresh
+		settings = ClaudeSettings{
+			Hooks: make(map[string][]HookMatcher),
+		}
+	} else {
+		if err := json.Unmarshal(content, &settings); err != nil {
+			return false, fmt.Errorf("failed to parse settings: %w", err)
+		}
+		if settings.Hooks == nil {
+			settings.Hooks = make(map[string][]HookMatcher)
+		}
+	}
+
+	// Check if hook already exists
+	const hookCommand = "tasks prime"
+	for _, matcher := range settings.Hooks["SessionStart"] {
+		for _, hook := range matcher.Hooks {
+			if hook.Command == hookCommand {
+				return false, nil // Already installed
+			}
+		}
+	}
+
+	// Add the hook
+	newHook := Hook{
+		Type:    "command",
+		Command: hookCommand,
+	}
+
+	// Find or create a matcher with empty string (matches all)
+	found := false
+	for i, matcher := range settings.Hooks["SessionStart"] {
+		if matcher.Matcher == "" {
+			settings.Hooks["SessionStart"][i].Hooks = append(matcher.Hooks, newHook)
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		// Create new matcher
+		settings.Hooks["SessionStart"] = append(settings.Hooks["SessionStart"], HookMatcher{
+			Matcher: "",
+			Hooks:   []Hook{newHook},
+		})
+	}
+
+	// Ensure directory exists
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0755); err != nil {
+		return false, fmt.Errorf("failed to create settings directory: %w", err)
+	}
+
+	// Write settings back
+	output, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal settings: %w", err)
+	}
+
+	if err := os.WriteFile(settingsPath, append(output, '\n'), 0644); err != nil {
+		return false, fmt.Errorf("failed to write settings: %w", err)
+	}
+
+	return true, nil
 }
 
 var primeCmd = &cobra.Command{

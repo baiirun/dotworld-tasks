@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,7 @@ import (
 func TestOnboard_CreatesNewFile(t *testing.T) {
 	dir := t.TempDir()
 	claudePath := filepath.Join(dir, "CLAUDE.md")
+	settingsPath := filepath.Join(dir, ".claude", "settings.json")
 
 	// Change to temp dir for the test
 	oldWd, _ := os.Getwd()
@@ -17,7 +19,7 @@ func TestOnboard_CreatesNewFile(t *testing.T) {
 	defer os.Chdir(oldWd)
 
 	output := captureOutput(func() {
-		if err := runOnboard(false); err != nil {
+		if err := runOnboardWithSettings(false, settingsPath); err != nil {
 			t.Fatalf("runOnboard failed: %v", err)
 		}
 	})
@@ -47,6 +49,7 @@ func TestOnboard_CreatesNewFile(t *testing.T) {
 func TestOnboard_AppendsToExisting(t *testing.T) {
 	dir := t.TempDir()
 	claudePath := filepath.Join(dir, "CLAUDE.md")
+	settingsPath := filepath.Join(dir, ".claude", "settings.json")
 
 	// Create existing file
 	existingContent := "# My Project\n\nSome existing content.\n"
@@ -60,7 +63,7 @@ func TestOnboard_AppendsToExisting(t *testing.T) {
 	defer os.Chdir(oldWd)
 
 	output := captureOutput(func() {
-		if err := runOnboard(false); err != nil {
+		if err := runOnboardWithSettings(false, settingsPath); err != nil {
 			t.Fatalf("runOnboard failed: %v", err)
 		}
 	})
@@ -87,11 +90,21 @@ func TestOnboard_AppendsToExisting(t *testing.T) {
 func TestOnboard_Idempotent(t *testing.T) {
 	dir := t.TempDir()
 	claudePath := filepath.Join(dir, "CLAUDE.md")
+	settingsPath := filepath.Join(dir, ".claude", "settings.json")
 
 	// Create file that already has Task Tracking section
 	existingContent := "# My Project\n\n## Task Tracking\n\nAlready configured.\n"
 	if err := os.WriteFile(claudePath, []byte(existingContent), 0644); err != nil {
 		t.Fatalf("failed to write existing CLAUDE.md: %v", err)
+	}
+
+	// Pre-install the hook so both CLAUDE.md and hook are "already done"
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0755); err != nil {
+		t.Fatalf("failed to create settings dir: %v", err)
+	}
+	existingSettings := `{"hooks":{"SessionStart":[{"matcher":"","hooks":[{"type":"command","command":"tasks prime"}]}]}}`
+	if err := os.WriteFile(settingsPath, []byte(existingSettings), 0644); err != nil {
+		t.Fatalf("failed to write existing settings.json: %v", err)
 	}
 
 	// Change to temp dir for the test
@@ -100,14 +113,17 @@ func TestOnboard_Idempotent(t *testing.T) {
 	defer os.Chdir(oldWd)
 
 	output := captureOutput(func() {
-		if err := runOnboard(false); err != nil {
+		if err := runOnboardWithSettings(false, settingsPath); err != nil {
 			t.Fatalf("runOnboard failed: %v", err)
 		}
 	})
 
-	// Check output message
-	if !strings.Contains(output, "Already onboarded") {
-		t.Errorf("expected 'Already onboarded' message, got: %s", output)
+	// Check output messages for both components
+	if !strings.Contains(output, "CLAUDE.md already has Task Tracking section") {
+		t.Errorf("expected CLAUDE.md already configured message, got: %s", output)
+	}
+	if !strings.Contains(output, "SessionStart hook already installed") {
+		t.Errorf("expected hook already installed message, got: %s", output)
 	}
 
 	// Check file wasn't modified
@@ -124,6 +140,7 @@ func TestOnboard_Idempotent(t *testing.T) {
 func TestOnboard_LowercaseFile(t *testing.T) {
 	dir := t.TempDir()
 	claudePath := filepath.Join(dir, "claude.md") // lowercase
+	settingsPath := filepath.Join(dir, ".claude", "settings.json")
 
 	// Create existing lowercase file
 	existingContent := "# My Project\n"
@@ -137,7 +154,7 @@ func TestOnboard_LowercaseFile(t *testing.T) {
 	defer os.Chdir(oldWd)
 
 	output := captureOutput(func() {
-		if err := runOnboard(false); err != nil {
+		if err := runOnboardWithSettings(false, settingsPath); err != nil {
 			t.Fatalf("runOnboard failed: %v", err)
 		}
 	})
@@ -169,6 +186,7 @@ func TestOnboard_LowercaseFile(t *testing.T) {
 func TestOnboard_SnippetContent(t *testing.T) {
 	dir := t.TempDir()
 	claudePath := filepath.Join(dir, "CLAUDE.md")
+	settingsPath := filepath.Join(dir, ".claude", "settings.json")
 
 	// Change to temp dir for the test
 	oldWd, _ := os.Getwd()
@@ -176,7 +194,7 @@ func TestOnboard_SnippetContent(t *testing.T) {
 	defer os.Chdir(oldWd)
 
 	captureOutput(func() {
-		if err := runOnboard(false); err != nil {
+		if err := runOnboardWithSettings(false, settingsPath); err != nil {
 			t.Fatalf("runOnboard failed: %v", err)
 		}
 	})
@@ -206,6 +224,7 @@ func TestOnboard_SnippetContent(t *testing.T) {
 func TestOnboard_ForceReplacesSection(t *testing.T) {
 	dir := t.TempDir()
 	claudePath := filepath.Join(dir, "CLAUDE.md")
+	settingsPath := filepath.Join(dir, ".claude", "settings.json")
 
 	// Create file with old Task Tracking section
 	oldContent := "# My Project\n\n## Task Tracking\n\nOld instructions here.\n"
@@ -219,7 +238,7 @@ func TestOnboard_ForceReplacesSection(t *testing.T) {
 	defer os.Chdir(oldWd)
 
 	output := captureOutput(func() {
-		if err := runOnboard(true); err != nil {
+		if err := runOnboardWithSettings(true, settingsPath); err != nil {
 			t.Fatalf("runOnboard --force failed: %v", err)
 		}
 	})
@@ -249,6 +268,7 @@ func TestOnboard_ForceReplacesSection(t *testing.T) {
 func TestOnboard_ForcePreservesContentAfterSection(t *testing.T) {
 	dir := t.TempDir()
 	claudePath := filepath.Join(dir, "CLAUDE.md")
+	settingsPath := filepath.Join(dir, ".claude", "settings.json")
 
 	// Create file with Task Tracking in the middle
 	oldContent := `# My Project
@@ -271,7 +291,7 @@ This should be preserved.
 	defer os.Chdir(oldWd)
 
 	captureOutput(func() {
-		if err := runOnboard(true); err != nil {
+		if err := runOnboardWithSettings(true, settingsPath); err != nil {
 			t.Fatalf("runOnboard --force failed: %v", err)
 		}
 	})
@@ -328,5 +348,273 @@ func TestReplaceTaskTrackingSection(t *testing.T) {
 				t.Errorf("got:\n%q\nwant:\n%q", result, tt.expected)
 			}
 		})
+	}
+}
+
+// Tests for SessionStart hook installation
+
+func TestInstallSessionStartHook_CreatesSettings(t *testing.T) {
+	dir := t.TempDir()
+	settingsPath := filepath.Join(dir, ".claude", "settings.json")
+
+	added, err := installSessionStartHook(settingsPath)
+	if err != nil {
+		t.Fatalf("installSessionStartHook failed: %v", err)
+	}
+
+	if !added {
+		t.Error("expected hook to be added")
+	}
+
+	// Verify file was created with correct structure
+	content, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("failed to read settings.json: %v", err)
+	}
+
+	var settings ClaudeSettings
+	if err := json.Unmarshal(content, &settings); err != nil {
+		t.Fatalf("failed to parse settings.json: %v", err)
+	}
+
+	// Verify hook structure
+	if len(settings.Hooks["SessionStart"]) != 1 {
+		t.Fatalf("expected 1 SessionStart matcher, got %d", len(settings.Hooks["SessionStart"]))
+	}
+
+	matcher := settings.Hooks["SessionStart"][0]
+	if matcher.Matcher != "" {
+		t.Errorf("expected empty matcher, got %q", matcher.Matcher)
+	}
+
+	if len(matcher.Hooks) != 1 {
+		t.Fatalf("expected 1 hook, got %d", len(matcher.Hooks))
+	}
+
+	hook := matcher.Hooks[0]
+	if hook.Type != "command" {
+		t.Errorf("expected type 'command', got %q", hook.Type)
+	}
+	if hook.Command != "tasks prime" {
+		t.Errorf("expected command 'tasks prime', got %q", hook.Command)
+	}
+}
+
+func TestInstallSessionStartHook_Idempotent(t *testing.T) {
+	dir := t.TempDir()
+	settingsPath := filepath.Join(dir, ".claude", "settings.json")
+
+	// First install
+	added1, err := installSessionStartHook(settingsPath)
+	if err != nil {
+		t.Fatalf("first installSessionStartHook failed: %v", err)
+	}
+	if !added1 {
+		t.Error("expected first call to add hook")
+	}
+
+	// Second install should be idempotent
+	added2, err := installSessionStartHook(settingsPath)
+	if err != nil {
+		t.Fatalf("second installSessionStartHook failed: %v", err)
+	}
+	if added2 {
+		t.Error("expected second call to not add hook")
+	}
+
+	// Verify only one hook exists
+	content, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("failed to read settings.json: %v", err)
+	}
+
+	var settings ClaudeSettings
+	if err := json.Unmarshal(content, &settings); err != nil {
+		t.Fatalf("failed to parse settings.json: %v", err)
+	}
+
+	// Count total hooks
+	totalHooks := 0
+	for _, matcher := range settings.Hooks["SessionStart"] {
+		totalHooks += len(matcher.Hooks)
+	}
+
+	if totalHooks != 1 {
+		t.Errorf("expected 1 hook, got %d", totalHooks)
+	}
+}
+
+func TestInstallSessionStartHook_MergesWithExisting(t *testing.T) {
+	dir := t.TempDir()
+	settingsDir := filepath.Join(dir, ".claude")
+	settingsPath := filepath.Join(settingsDir, "settings.json")
+
+	// Create existing settings with other hooks
+	if err := os.MkdirAll(settingsDir, 0755); err != nil {
+		t.Fatalf("failed to create settings dir: %v", err)
+	}
+
+	existingSettings := ClaudeSettings{
+		Hooks: map[string][]HookMatcher{
+			"SessionStart": {
+				{
+					Matcher: "",
+					Hooks: []Hook{
+						{Type: "command", Command: "bd prime"},
+					},
+				},
+			},
+			"PreCompact": {
+				{
+					Matcher: "",
+					Hooks: []Hook{
+						{Type: "command", Command: "other-hook"},
+					},
+				},
+			},
+		},
+		EnabledPlugins: map[string]bool{
+			"some-plugin": true,
+		},
+	}
+
+	data, err := json.MarshalIndent(existingSettings, "", "  ")
+	if err != nil {
+		t.Fatalf("failed to marshal existing settings: %v", err)
+	}
+	if err := os.WriteFile(settingsPath, data, 0644); err != nil {
+		t.Fatalf("failed to write existing settings: %v", err)
+	}
+
+	// Install hook
+	added, err := installSessionStartHook(settingsPath)
+	if err != nil {
+		t.Fatalf("installSessionStartHook failed: %v", err)
+	}
+	if !added {
+		t.Error("expected hook to be added")
+	}
+
+	// Verify merged settings
+	content, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("failed to read settings.json: %v", err)
+	}
+
+	var settings ClaudeSettings
+	if err := json.Unmarshal(content, &settings); err != nil {
+		t.Fatalf("failed to parse settings.json: %v", err)
+	}
+
+	// Check SessionStart has both hooks
+	sessionStart := settings.Hooks["SessionStart"]
+	if len(sessionStart) != 1 {
+		t.Fatalf("expected 1 SessionStart matcher, got %d", len(sessionStart))
+	}
+
+	hooks := sessionStart[0].Hooks
+	if len(hooks) != 2 {
+		t.Fatalf("expected 2 hooks in SessionStart, got %d", len(hooks))
+	}
+
+	// Verify both hooks are present
+	foundBdPrime := false
+	foundTasksPrime := false
+	for _, h := range hooks {
+		if h.Command == "bd prime" {
+			foundBdPrime = true
+		}
+		if h.Command == "tasks prime" {
+			foundTasksPrime = true
+		}
+	}
+
+	if !foundBdPrime {
+		t.Error("lost existing 'bd prime' hook")
+	}
+	if !foundTasksPrime {
+		t.Error("missing 'tasks prime' hook")
+	}
+
+	// Check PreCompact is preserved
+	if len(settings.Hooks["PreCompact"]) != 1 {
+		t.Error("PreCompact hooks should be preserved")
+	}
+
+	// Check plugins are preserved
+	if !settings.EnabledPlugins["some-plugin"] {
+		t.Error("enabledPlugins should be preserved")
+	}
+}
+
+func TestInstallSessionStartHook_AlreadyExists(t *testing.T) {
+	dir := t.TempDir()
+	settingsDir := filepath.Join(dir, ".claude")
+	settingsPath := filepath.Join(settingsDir, "settings.json")
+
+	// Create settings with tasks prime already installed
+	if err := os.MkdirAll(settingsDir, 0755); err != nil {
+		t.Fatalf("failed to create settings dir: %v", err)
+	}
+
+	existingSettings := ClaudeSettings{
+		Hooks: map[string][]HookMatcher{
+			"SessionStart": {
+				{
+					Matcher: "",
+					Hooks: []Hook{
+						{Type: "command", Command: "tasks prime"},
+					},
+				},
+			},
+		},
+	}
+
+	data, err := json.MarshalIndent(existingSettings, "", "  ")
+	if err != nil {
+		t.Fatalf("failed to marshal existing settings: %v", err)
+	}
+	if err := os.WriteFile(settingsPath, data, 0644); err != nil {
+		t.Fatalf("failed to write existing settings: %v", err)
+	}
+
+	// Try to install - should detect existing
+	added, err := installSessionStartHook(settingsPath)
+	if err != nil {
+		t.Fatalf("installSessionStartHook failed: %v", err)
+	}
+	if added {
+		t.Error("should not add hook when already present")
+	}
+}
+
+func TestOnboard_InstallsHook(t *testing.T) {
+	dir := t.TempDir()
+	settingsPath := filepath.Join(dir, ".claude", "settings.json")
+
+	// Change to temp dir for the test
+	oldWd, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(oldWd)
+
+	output := captureOutput(func() {
+		if err := runOnboardWithSettings(false, settingsPath); err != nil {
+			t.Fatalf("runOnboard failed: %v", err)
+		}
+	})
+
+	// Check hook installation message
+	if !strings.Contains(output, "Installed SessionStart hook") {
+		t.Errorf("expected hook installation message, got: %s", output)
+	}
+
+	// Verify settings file was created
+	content, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("failed to read settings.json: %v", err)
+	}
+
+	if !strings.Contains(string(content), "tasks prime") {
+		t.Error("settings.json should contain 'tasks prime' command")
 	}
 }
