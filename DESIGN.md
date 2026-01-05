@@ -76,17 +76,25 @@ CREATE TABLE logs (
 
 ```
 tasks init                        # create tasks.db
+tasks onboard                     # set up Claude Code hooks
+tasks prime                       # output context for hooks
 tasks add <title>                 # create task, returns id
 tasks add -e <title>              # create epic
 tasks list [--status=X] [--project=X]
 tasks ready [--project=X]         # unblocked tasks by priority
 tasks show <id>                   # full item detail
 tasks start <id>                  # claim, set in_progress
-tasks log <message>               # append to current task's log
-tasks block <reason>              # set blocked + log reason
-tasks done [id]                   # complete task
+tasks log <id> <message>          # append to task's log
+tasks block <id> <reason>         # set blocked + log reason
+tasks done <id>                   # complete task
+tasks cancel <id> [reason]        # close without completing
 tasks append <id> <text>          # append to description
+tasks desc <id> <text>            # replace description
+tasks edit <id>                   # edit description in $TASKS_EDITOR
+tasks delete <id>                 # delete task or epic
 tasks dep <id> --on <other>       # add dependency
+tasks blocks <id> <other>         # id blocks other
+tasks parent <id> <epic-id>       # set parent epic
 tasks graph [--project=X]         # show dependency tree
 tasks projects                    # list all projects
 tasks status [--project=X]        # overview for agent spin-up

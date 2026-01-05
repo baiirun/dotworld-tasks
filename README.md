@@ -2,15 +2,6 @@
 
 Lightweight task management for AI agents. SQLite-backed, CLI-driven.
 
-## Requirements
-
-This tool assumes you're using [Claude Code](https://docs.anthropic.com/en/docs/claude-code). The `tasks onboard` command automatically configures Claude Code hooks to inject workflow context at session start and before context compaction.
-
-**Not using Claude Code?** You'll need to manually integrate the workflow context into your agent setup:
-1. Run `tasks prime` to see the context that should be injected
-2. Run `tasks onboard` to see what it would configure
-3. Add the `tasks prime` output to your `AGENTS.md`, system prompt, or equivalent session-start mechanism
-
 ## Install
 
 ### Homebrew (macOS/Linux)
@@ -44,6 +35,9 @@ go build -o tasks ./cmd/tasks
 # Initialize database (creates ~/.world/tasks/tasks.db)
 tasks init
 
+# Set up Claude Code hooks (recommended)
+tasks onboard
+
 # Create a task
 tasks add "Implement user authentication" -p myproject --priority 1
 # Output: ts-a1b2c3
@@ -68,6 +62,7 @@ tasks done ts-a1b2c3
 | Command | Description |
 |---------|-------------|
 | `tasks init` | Initialize the database |
+| `tasks onboard` | Set up tasks integration for AI agents |
 | `tasks add <title>` | Create a task (returns ID) |
 | `tasks list` | List all tasks |
 | `tasks show <id>` | Show task details, logs, and dependencies |
@@ -224,11 +219,17 @@ tasks show ts-d4e5f6
 
 ## Claude Code Integration
 
-The `tasks prime` command outputs workflow context designed for Claude Code hooks. It ensures agents maintain context about the tasks workflow across sessions and after context compaction.
+The `tasks onboard` command configures Claude Code hooks to inject workflow context at session start and before context compaction. This ensures agents maintain context about the tasks workflow across sessions.
+
+**Using a different agent?** (Cursor, Opencode, Droid, Codex, Gemini, etc.)
+
+1. Copy the Task Tracking snippet from `CLAUDE.md` to your agent's instruction file (`.cursorrules`, `AGENTS.md`, etc.)
+2. If your tool supports hooks, add `tasks prime` to session start
+3. If no hooks, run `tasks prime` and paste output into agent context
 
 ### Hook Configuration
 
-Add to your Claude Code settings (`.claude/settings.json`):
+Running `tasks onboard` adds this to your Claude Code settings (`.claude/settings.json`):
 
 ```json
 {

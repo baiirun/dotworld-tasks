@@ -77,7 +77,11 @@ var initCmd = &cobra.Command{
 	Short: "Initialize the tasks database",
 	Long:  "Creates the database at ~/.world/tasks/tasks.db if it doesn't exist.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		database, err := openDB()
+		path, err := db.DefaultPath()
+		if err != nil {
+			return err
+		}
+		database, err := db.Open(path)
 		if err != nil {
 			return err
 		}
@@ -86,7 +90,8 @@ var initCmd = &cobra.Command{
 		if err := database.Init(); err != nil {
 			return err
 		}
-		fmt.Println("Initialized tasks database")
+		fmt.Printf("Initialized tasks database at %s\n", path)
+		fmt.Println("\nNext: run 'tasks onboard' to set up Claude Code integration")
 		return nil
 	},
 }
@@ -755,12 +760,19 @@ Example:
 
 var onboardCmd = &cobra.Command{
 	Use:   "onboard",
-	Short: "Add tasks integration to CLAUDE.md and install SessionStart hook",
-	Long: `Set up tasks integration for Claude Code agents.
+	Short: "Set up tasks integration for AI agents",
+	Long: `Set up tasks integration for AI agents.
 
-This command does two things:
+Designed for Claude Code but provides guidance for other agents.
+
+For Claude Code, this command:
 1. Writes a tasks workflow snippet to CLAUDE.md in the current directory
 2. Installs a SessionStart hook in ~/.claude/settings.json to auto-run 'tasks prime'
+
+For other agents (Cursor, Opencode, Droid, Codex, Gemini, etc.):
+- Copy the Task Tracking snippet to your agent's instruction file
+- If hooks are available, add 'tasks prime' to session start
+- Otherwise, run 'tasks prime' and paste output into agent context
 
 Creates files if they don't exist. Skips if already configured (use --force to update).
 
@@ -872,6 +884,14 @@ For full workflow: ` + "`tasks prime`" + `
 	if !claudeMDUpdated && !hookAdded && !force {
 		fmt.Println("Use --force to update existing configuration")
 	}
+
+	// Print summary and guidance for other agents
+	fmt.Println()
+	fmt.Println("Note: This assumes Claude Code. For other agents:")
+	fmt.Println("  1. Update your agent's instruction file (AGENTS.md, .cursorrules, etc.)")
+	fmt.Println("     with the Task Tracking section above")
+	fmt.Println("  2. If your tool supports hooks, add 'tasks prime' to session start")
+	fmt.Println("  3. If no hooks, run 'tasks prime' and paste output into agent context")
 
 	return nil
 }
