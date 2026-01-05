@@ -90,7 +90,7 @@ tasks done ts-a1b2c3
 | `tasks log <id> <message>` | Add timestamped log entry |
 | `tasks append <id> <text>` | Append to task description |
 | `tasks desc <id> <text>` | Replace task description |
-| `tasks edit <id>` | Edit description in $TASKS_EDITOR |
+| `tasks edit <id>` | Edit description in $TASKS_EDITOR (defaults to nvim, nano, vi) |
 
 ### Organization
 
@@ -161,8 +161,14 @@ tasks start ts-d4e5f6
 tasks log ts-d4e5f6 "Implemented POST /login"
 tasks log ts-d4e5f6 "Added rate limiting"
 
-# Update description with decisions/context
+# Append to description with decisions/context
 tasks append ts-d4e5f6 "Using bcrypt for password hashing"
+
+# Replace description entirely
+tasks desc ts-d4e5f6 "Implement login endpoint with JWT auth and rate limiting"
+
+# Or edit in your editor
+tasks edit ts-d4e5f6
 ```
 
 ### Finish or hand off
