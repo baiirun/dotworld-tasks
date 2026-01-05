@@ -18,6 +18,8 @@ var (
 	flagPriority  int
 	flagDependsOn string
 	flagForce     bool
+	flagParent    string
+	flagBlocks    string
 )
 
 func openDB() (*db.DB, error) {
@@ -77,7 +79,9 @@ Returns the generated ID (ts-XXXXXX for tasks, ep-XXXXXX for epics).
 Examples:
   tasks add "Fix login bug" -p myproject
   tasks add "Auth system" -p myproject -e
-  tasks add "Critical fix" --priority 1`,
+  tasks add "Critical fix" --priority 1
+  tasks add "Subtask" --parent ep-abc123
+  tasks add "Dependency" --blocks ts-xyz789`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
@@ -105,6 +109,23 @@ Examples:
 		if err := database.CreateItem(item); err != nil {
 			return err
 		}
+
+		// Set parent if specified
+		if flagParent != "" {
+			if err := database.SetParent(item.ID, flagParent); err != nil {
+				return err
+			}
+		}
+
+		// Add blocking relationship if specified
+		if flagBlocks != "" {
+			// This new item blocks the specified item
+			// (the blocked item depends on this new one)
+			if err := database.AddDep(flagBlocks, item.ID); err != nil {
+				return err
+			}
+		}
+
 		fmt.Println(item.ID)
 		return nil
 	},
@@ -761,6 +782,8 @@ func init() {
 	// add flags
 	addCmd.Flags().BoolVarP(&flagEpic, "epic", "e", false, "Create an epic instead of a task")
 	addCmd.Flags().IntVar(&flagPriority, "priority", 2, "Priority (1=high, 2=medium, 3=low)")
+	addCmd.Flags().StringVar(&flagParent, "parent", "", "Parent epic ID")
+	addCmd.Flags().StringVar(&flagBlocks, "blocks", "", "ID of task this will block")
 
 	// list flags
 	listCmd.Flags().StringVar(&flagStatus, "status", "", "Filter by status (open, in_progress, blocked, done)")
@@ -983,6 +1006,8 @@ tasks block <id> "why"    # Mark blocked
 # Creating & organizing
 tasks add "title" -p project    # New task
 tasks add "title" -e            # New epic
+tasks add "title" --parent <epic-id>   # New task under epic
+tasks add "title" --blocks <id>        # New task that blocks id
 tasks parent <id> <epic-id>     # Set task's parent epic
 tasks blocks <id> <other>       # id blocks other (other can't start until id done)
 

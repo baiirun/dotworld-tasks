@@ -82,6 +82,8 @@ tasks done ts-a1b2c3
 | `-p, --project` | all | Filter/set project scope |
 | `-e, --epic` | add | Create epic instead of task |
 | `--priority` | add | Priority: 1=high, 2=medium (default), 3=low |
+| `--parent` | add | Set parent epic at creation |
+| `--blocks` | add | Set task this will block at creation |
 | `--status` | list | Filter by status |
 
 ## ID Format
@@ -156,7 +158,11 @@ tasks append ep-a1b2c3 "Completed auth endpoint, next: write tests"
 Use dependencies to enforce task ordering. A task with unmet dependencies won't appear in `tasks ready`.
 
 ```bash
-# ts-backend must complete before ts-frontend can start
+# Create a task that blocks another (at creation time)
+tasks add "Build API" -p myproject --blocks ts-frontend
+# New task blocks ts-frontend, so ts-frontend can't start until the new task is done
+
+# Or add blocking relationship to existing tasks
 tasks blocks ts-backend ts-frontend
 # Or equivalently:
 tasks dep ts-frontend --on ts-backend
@@ -180,7 +186,10 @@ Group related tasks under an epic for organization:
 tasks add "Authentication system" -p myproject -e
 # Output: ep-a1b2c3
 
-# Assign tasks to the epic
+# Create task under epic (at creation time)
+tasks add "Implement login" -p myproject --parent ep-a1b2c3
+
+# Or assign existing tasks to the epic
 tasks parent ts-d4e5f6 ep-a1b2c3
 tasks parent ts-g7h8i9 ep-a1b2c3
 
