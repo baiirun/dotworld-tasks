@@ -254,4 +254,3 @@ func TestAddCmd_BothFlags(t *testing.T) {
 		t.Error("blocking relationship not set correctly")
 	}
 }
-

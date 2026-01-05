@@ -147,6 +147,25 @@ func (db *DB) SetDescription(id string, text string) error {
 	return nil
 }
 
+// SetTitle replaces an item's title.
+func (db *DB) SetTitle(id string, title string) error {
+	result, err := db.Exec(`
+		UPDATE items
+		SET title = ?,
+		    updated_at = ?
+		WHERE id = ?`,
+		title, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("failed to set title: %w", err)
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("item not found: %s (use 'prog list' to see available items)", id)
+	}
+	return nil
+}
+
 // DeleteItem removes an item and its associated logs and dependencies.
 func (db *DB) DeleteItem(id string) error {
 	// Check if item exists first

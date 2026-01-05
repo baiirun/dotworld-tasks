@@ -46,6 +46,7 @@ var (
 	flagBlockedBy   string
 	flagHasBlockers bool
 	flagNoBlockers  bool
+	flagEditTitle   string
 )
 
 func openDB() (*db.DB, error) {
@@ -569,15 +570,18 @@ Example:
 
 var editCmd = &cobra.Command{
 	Use:   "edit <id>",
-	Short: "Edit a task's description in $PROG_EDITOR",
-	Long: `Open a task's description in your configured editor.
+	Short: "Edit a task's title or description",
+	Long: `Edit a task's title or description.
+
+With --title, updates the title directly without opening an editor.
+Without flags, opens the description in your configured editor.
 
 Uses $PROG_EDITOR if set, otherwise defaults to nvim, then nano, then vi.
-After saving and closing, the description is updated.
 
-Example:
-  prog edit ts-a1b2c3
-  PROG_EDITOR=code prog edit ts-a1b2c3`,
+Examples:
+  prog edit ts-a1b2c3                     # Edit description in editor
+  prog edit ts-a1b2c3 --title "New title" # Update title directly
+  PROG_EDITOR=code prog edit ts-a1b2c3    # Use VS Code as editor`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
@@ -587,6 +591,15 @@ Example:
 		defer func() { _ = database.Close() }()
 
 		id := args[0]
+
+		// If --title flag is set, update title directly
+		if flagEditTitle != "" {
+			if err := database.SetTitle(id, flagEditTitle); err != nil {
+				return err
+			}
+			fmt.Printf("Updated title for %s\n", id)
+			return nil
+		}
 
 		// Get current description
 		item, err := database.GetItem(id)
@@ -1072,6 +1085,9 @@ func init() {
 
 	// onboard flags
 	onboardCmd.Flags().BoolVar(&flagForce, "force", false, "Replace existing Task Tracking section")
+
+	// edit flags
+	editCmd.Flags().StringVar(&flagEditTitle, "title", "", "New title for the task")
 
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
