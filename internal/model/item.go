@@ -18,7 +18,9 @@ func GenerateID(itemType ItemType) string {
 		prefix = "ep-"
 	}
 	b := make([]byte, 3)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
 	return prefix + hex.EncodeToString(b)
 }
 

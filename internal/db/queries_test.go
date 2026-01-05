@@ -97,7 +97,9 @@ func TestReadyItems(t *testing.T) {
 	createTestItemWithProject(t, db, "Task 3", "test", model.StatusInProgress, 2) // not ready (in_progress)
 
 	// task2 depends on task1
-	db.AddDep(task2.ID, task1.ID)
+	if err := db.AddDep(task2.ID, task1.ID); err != nil {
+		t.Fatalf("failed to add dep: %v", err)
+	}
 
 	ready, err := db.ReadyItems("test")
 	if err != nil {
@@ -113,7 +115,9 @@ func TestReadyItems(t *testing.T) {
 	}
 
 	// Complete task1, now task2 should be ready
-	db.UpdateStatus(task1.ID, model.StatusDone)
+	if err := db.UpdateStatus(task1.ID, model.StatusDone); err != nil {
+		t.Fatalf("failed to update status: %v", err)
+	}
 
 	ready, _ = db.ReadyItems("test")
 	if len(ready) != 1 {
@@ -286,9 +290,13 @@ func TestListItemsFiltered_Blocking(t *testing.T) {
 	task3 := createTestItemWithProject(t, db, "Task 3", "test", model.StatusOpen, 2)
 
 	// task2 depends on task1 (task1 blocks task2)
-	db.AddDep(task2.ID, task1.ID)
+	if err := db.AddDep(task2.ID, task1.ID); err != nil {
+		t.Fatalf("failed to add dep: %v", err)
+	}
 	// task2 also depends on task3 (task3 blocks task2)
-	db.AddDep(task2.ID, task3.ID)
+	if err := db.AddDep(task2.ID, task3.ID); err != nil {
+		t.Fatalf("failed to add dep: %v", err)
+	}
 
 	// Find items that block task2
 	items, err := db.ListItemsFiltered(ListFilter{Blocking: task2.ID})
@@ -317,9 +325,13 @@ func TestListItemsFiltered_BlockedBy(t *testing.T) {
 	task3 := createTestItemWithProject(t, db, "Task 3", "test", model.StatusOpen, 2)
 
 	// task2 depends on task1 (task2 is blocked by task1)
-	db.AddDep(task2.ID, task1.ID)
+	if err := db.AddDep(task2.ID, task1.ID); err != nil {
+		t.Fatalf("failed to add dep: %v", err)
+	}
 	// task3 depends on task1 (task3 is blocked by task1)
-	db.AddDep(task3.ID, task1.ID)
+	if err := db.AddDep(task3.ID, task1.ID); err != nil {
+		t.Fatalf("failed to add dep: %v", err)
+	}
 
 	// Find items blocked by task1
 	items, err := db.ListItemsFiltered(ListFilter{BlockedBy: task1.ID})
@@ -348,7 +360,9 @@ func TestListItemsFiltered_HasBlockers(t *testing.T) {
 	task3 := createTestItemWithProject(t, db, "Task 3", "test", model.StatusOpen, 2)
 
 	// task2 depends on task1
-	db.AddDep(task2.ID, task1.ID)
+	if err := db.AddDep(task2.ID, task1.ID); err != nil {
+		t.Fatalf("failed to add dep: %v", err)
+	}
 
 	// Find items with unresolved blockers
 	items, err := db.ListItemsFiltered(ListFilter{HasBlockers: true})
@@ -363,7 +377,9 @@ func TestListItemsFiltered_HasBlockers(t *testing.T) {
 	}
 
 	// Complete task1, now task2 should have no unresolved blockers
-	db.UpdateStatus(task1.ID, model.StatusDone)
+	if err := db.UpdateStatus(task1.ID, model.StatusDone); err != nil {
+		t.Fatalf("failed to update status: %v", err)
+	}
 
 	items, err = db.ListItemsFiltered(ListFilter{HasBlockers: true})
 	if err != nil {
@@ -385,7 +401,9 @@ func TestListItemsFiltered_NoBlockers(t *testing.T) {
 	task3 := createTestItemWithProject(t, db, "Task 3", "test", model.StatusOpen, 2)
 
 	// task2 depends on task1
-	db.AddDep(task2.ID, task1.ID)
+	if err := db.AddDep(task2.ID, task1.ID); err != nil {
+		t.Fatalf("failed to add dep: %v", err)
+	}
 
 	// Find items with no blockers (task1 and task3)
 	items, err := db.ListItemsFiltered(ListFilter{NoBlockers: true})
@@ -409,7 +427,9 @@ func TestListItemsFiltered_NoBlockers(t *testing.T) {
 	}
 
 	// Complete task1, now task2 should also have no unresolved blockers
-	db.UpdateStatus(task1.ID, model.StatusDone)
+	if err := db.UpdateStatus(task1.ID, model.StatusDone); err != nil {
+		t.Fatalf("failed to update status: %v", err)
+	}
 
 	items, err = db.ListItemsFiltered(ListFilter{NoBlockers: true})
 	if err != nil {
@@ -429,8 +449,12 @@ func TestListItemsFiltered_CombinedFilters(t *testing.T) {
 	task3 := createTestItemWithProject(t, db, "Task 3", "other", model.StatusOpen, 2)
 
 	// Set parents
-	db.SetParent(task1.ID, epic.ID)
-	db.SetParent(task2.ID, epic.ID)
+	if err := db.SetParent(task1.ID, epic.ID); err != nil {
+		t.Fatalf("failed to set parent: %v", err)
+	}
+	if err := db.SetParent(task2.ID, epic.ID); err != nil {
+		t.Fatalf("failed to set parent: %v", err)
+	}
 
 	// Filter by parent and status
 	status := model.StatusOpen

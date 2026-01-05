@@ -25,7 +25,7 @@ func (db *DB) GetLogs(itemID string) ([]model.Log, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get logs: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var logs []model.Log
 	for rows.Next() {

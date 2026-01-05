@@ -14,9 +14,14 @@ func TestOnboard_CreatesNewFile(t *testing.T) {
 	settingsPath := filepath.Join(dir, ".claude", "settings.json")
 
 	// Change to temp dir for the test
-	oldWd, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(oldWd)
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working directory: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("failed to change to temp dir: %v", err)
+	}
+	defer func() { _ = os.Chdir(oldWd) }()
 
 	output := captureOutput(func() {
 		if err := runOnboardWithSettings(false, settingsPath); err != nil {
@@ -58,9 +63,14 @@ func TestOnboard_AppendsToExisting(t *testing.T) {
 	}
 
 	// Change to temp dir for the test
-	oldWd, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(oldWd)
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working directory: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("failed to change to temp dir: %v", err)
+	}
+	defer func() { _ = os.Chdir(oldWd) }()
 
 	output := captureOutput(func() {
 		if err := runOnboardWithSettings(false, settingsPath); err != nil {
@@ -108,9 +118,14 @@ func TestOnboard_Idempotent(t *testing.T) {
 	}
 
 	// Change to temp dir for the test
-	oldWd, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(oldWd)
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working directory: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("failed to change to temp dir: %v", err)
+	}
+	defer func() { _ = os.Chdir(oldWd) }()
 
 	output := captureOutput(func() {
 		if err := runOnboardWithSettings(false, settingsPath); err != nil {
@@ -149,9 +164,14 @@ func TestOnboard_LowercaseFile(t *testing.T) {
 	}
 
 	// Change to temp dir for the test
-	oldWd, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(oldWd)
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working directory: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("failed to change to temp dir: %v", err)
+	}
+	defer func() { _ = os.Chdir(oldWd) }()
 
 	output := captureOutput(func() {
 		if err := runOnboardWithSettings(false, settingsPath); err != nil {
@@ -189,9 +209,14 @@ func TestOnboard_SnippetContent(t *testing.T) {
 	settingsPath := filepath.Join(dir, ".claude", "settings.json")
 
 	// Change to temp dir for the test
-	oldWd, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(oldWd)
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working directory: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("failed to change to temp dir: %v", err)
+	}
+	defer func() { _ = os.Chdir(oldWd) }()
 
 	captureOutput(func() {
 		if err := runOnboardWithSettings(false, settingsPath); err != nil {
@@ -233,9 +258,14 @@ func TestOnboard_ForceReplacesSection(t *testing.T) {
 	}
 
 	// Change to temp dir for the test
-	oldWd, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(oldWd)
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working directory: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("failed to change to temp dir: %v", err)
+	}
+	defer func() { _ = os.Chdir(oldWd) }()
 
 	output := captureOutput(func() {
 		if err := runOnboardWithSettings(true, settingsPath); err != nil {
@@ -286,9 +316,14 @@ This should be preserved.
 	}
 
 	// Change to temp dir for the test
-	oldWd, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(oldWd)
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working directory: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("failed to change to temp dir: %v", err)
+	}
+	defer func() { _ = os.Chdir(oldWd) }()
 
 	captureOutput(func() {
 		if err := runOnboardWithSettings(true, settingsPath); err != nil {
@@ -593,9 +628,14 @@ func TestOnboard_InstallsHook(t *testing.T) {
 	settingsPath := filepath.Join(dir, ".claude", "settings.json")
 
 	// Change to temp dir for the test
-	oldWd, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(oldWd)
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working directory: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("failed to change to temp dir: %v", err)
+	}
+	defer func() { _ = os.Chdir(oldWd) }()
 
 	output := captureOutput(func() {
 		if err := runOnboardWithSettings(false, settingsPath); err != nil {

@@ -19,7 +19,9 @@ func TestAddLog(t *testing.T) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	db.CreateItem(item)
+	if err := db.CreateItem(item); err != nil {
+		t.Fatalf("failed to create item: %v", err)
+	}
 
 	if err := db.AddLog(item.ID, "First log"); err != nil {
 		t.Fatalf("failed to add log: %v", err)
@@ -57,7 +59,9 @@ func TestGetLogs_Empty(t *testing.T) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	db.CreateItem(item)
+	if err := db.CreateItem(item); err != nil {
+		t.Fatalf("failed to create item: %v", err)
+	}
 
 	logs, err := db.GetLogs(item.ID)
 	if err != nil {
@@ -81,11 +85,19 @@ func TestGetLogs_Order(t *testing.T) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	db.CreateItem(item)
+	if err := db.CreateItem(item); err != nil {
+		t.Fatalf("failed to create item: %v", err)
+	}
 
-	db.AddLog(item.ID, "First")
-	db.AddLog(item.ID, "Second")
-	db.AddLog(item.ID, "Third")
+	if err := db.AddLog(item.ID, "First"); err != nil {
+		t.Fatalf("failed to add log: %v", err)
+	}
+	if err := db.AddLog(item.ID, "Second"); err != nil {
+		t.Fatalf("failed to add log: %v", err)
+	}
+	if err := db.AddLog(item.ID, "Third"); err != nil {
+		t.Fatalf("failed to add log: %v", err)
+	}
 
 	logs, _ := db.GetLogs(item.ID)
 

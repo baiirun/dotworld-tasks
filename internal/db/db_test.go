@@ -23,7 +23,7 @@ func setupTestDB(t *testing.T) *DB {
 		t.Fatalf("failed to init db: %v", err)
 	}
 
-	t.Cleanup(func() { db.Close() })
+	t.Cleanup(func() { _ = db.Close() })
 	return db
 }
 
@@ -35,7 +35,7 @@ func TestOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open db: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Should create parent directories
 	if _, err := os.Stat(filepath.Dir(path)); os.IsNotExist(err) {
@@ -149,7 +149,9 @@ func TestUpdateStatus(t *testing.T) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	db.CreateItem(item)
+	if err := db.CreateItem(item); err != nil {
+		t.Fatalf("failed to create item: %v", err)
+	}
 
 	if err := db.UpdateStatus(item.ID, model.StatusInProgress); err != nil {
 		t.Fatalf("failed to update status: %v", err)
@@ -192,7 +194,9 @@ func TestAppendDescription(t *testing.T) {
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
-	db.CreateItem(item)
+	if err := db.CreateItem(item); err != nil {
+		t.Fatalf("failed to create item: %v", err)
+	}
 
 	if err := db.AppendDescription(item.ID, "Appended text"); err != nil {
 		t.Fatalf("failed to append: %v", err)
@@ -216,7 +220,9 @@ func TestSetParent(t *testing.T) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	db.CreateItem(epic)
+	if err := db.CreateItem(epic); err != nil {
+		t.Fatalf("failed to create epic: %v", err)
+	}
 
 	task := &model.Item{
 		ID:        model.GenerateID(model.ItemTypeTask),
@@ -227,7 +233,9 @@ func TestSetParent(t *testing.T) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	db.CreateItem(task)
+	if err := db.CreateItem(task); err != nil {
+		t.Fatalf("failed to create task: %v", err)
+	}
 
 	if err := db.SetParent(task.ID, epic.ID); err != nil {
 		t.Fatalf("failed to set parent: %v", err)
@@ -254,7 +262,9 @@ func TestSetParent_NotEpic(t *testing.T) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	db.CreateItem(task1)
+	if err := db.CreateItem(task1); err != nil {
+		t.Fatalf("failed to create task1: %v", err)
+	}
 
 	task2 := &model.Item{
 		ID:        model.GenerateID(model.ItemTypeTask),
@@ -265,7 +275,9 @@ func TestSetParent_NotEpic(t *testing.T) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	db.CreateItem(task2)
+	if err := db.CreateItem(task2); err != nil {
+		t.Fatalf("failed to create task2: %v", err)
+	}
 
 	err := db.SetParent(task2.ID, task1.ID)
 	if err == nil {
@@ -286,7 +298,9 @@ func TestSetDescription(t *testing.T) {
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
-	db.CreateItem(item)
+	if err := db.CreateItem(item); err != nil {
+		t.Fatalf("failed to create item: %v", err)
+	}
 
 	if err := db.SetDescription(item.ID, "New description"); err != nil {
 		t.Fatalf("failed to set description: %v", err)
@@ -310,7 +324,9 @@ func TestSetDescription_EmptyToContent(t *testing.T) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	db.CreateItem(item)
+	if err := db.CreateItem(item); err != nil {
+		t.Fatalf("failed to create item: %v", err)
+	}
 
 	if err := db.SetDescription(item.ID, "Added description"); err != nil {
 		t.Fatalf("failed to set description: %v", err)
@@ -343,7 +359,9 @@ func TestSetParent_NotFound(t *testing.T) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	db.CreateItem(epic)
+	if err := db.CreateItem(epic); err != nil {
+		t.Fatalf("failed to create epic: %v", err)
+	}
 
 	// Nonexistent task
 	err := db.SetParent("nonexistent", epic.ID)
@@ -361,7 +379,9 @@ func TestSetParent_NotFound(t *testing.T) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	db.CreateItem(task)
+	if err := db.CreateItem(task); err != nil {
+		t.Fatalf("failed to create task: %v", err)
+	}
 
 	err = db.SetParent(task.ID, "nonexistent")
 	if err == nil {

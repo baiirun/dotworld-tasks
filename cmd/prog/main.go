@@ -90,7 +90,7 @@ var initCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		if err := database.Init(); err != nil {
 			return err
@@ -120,7 +120,7 @@ Examples:
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		itemType := model.ItemTypeTask
 		if flagEpic {
@@ -184,7 +184,7 @@ Examples:
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		var status *model.Status
 		if flagStatus != "" {
@@ -235,7 +235,7 @@ Examples:
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		items, err := database.ReadyItems(flagProject)
 		if err != nil {
@@ -264,7 +264,7 @@ Example:
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		item, err := database.GetItem(args[0])
 		if err != nil {
@@ -295,7 +295,7 @@ var startCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		if err := database.UpdateStatus(args[0], model.StatusInProgress); err != nil {
 			return err
@@ -314,7 +314,7 @@ var doneCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		if err := database.UpdateStatus(args[0], model.StatusDone); err != nil {
 			return err
@@ -341,7 +341,7 @@ Example:
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		id := args[0]
 
@@ -377,7 +377,7 @@ Example:
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		id := args[0]
 		reason := strings.Join(args[1:], " ")
@@ -409,7 +409,7 @@ Example:
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		if err := database.DeleteItem(args[0]); err != nil {
 			return err
@@ -434,7 +434,7 @@ Example:
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		id := args[0]
 		message := strings.Join(args[1:], " ")
@@ -462,7 +462,7 @@ Examples:
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		edges, err := database.GetAllDeps(flagProject)
 		if err != nil {
@@ -488,7 +488,7 @@ var projectsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		projects, err := database.ListProjects()
 		if err != nil {
@@ -527,7 +527,7 @@ Examples:
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		report, err := database.ProjectStatus(flagProject)
 		if err != nil {
@@ -554,7 +554,7 @@ Example:
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		id := args[0]
 		text := strings.Join(args[1:], " ")
@@ -584,7 +584,7 @@ Example:
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		id := args[0]
 
@@ -612,14 +612,16 @@ Example:
 			return fmt.Errorf("failed to create temp file: %w", err)
 		}
 		tmpPath := tmpfile.Name()
-		defer os.Remove(tmpPath)
+		defer func() { _ = os.Remove(tmpPath) }()
 
 		// Write current description
 		if _, err := tmpfile.WriteString(item.Description); err != nil {
-			tmpfile.Close()
+			_ = tmpfile.Close()
 			return fmt.Errorf("failed to write temp file: %w", err)
 		}
-		tmpfile.Close()
+		if err := tmpfile.Close(); err != nil {
+			return fmt.Errorf("failed to close temp file: %w", err)
+		}
 
 		// Get original stat for comparison
 		origStat, err := os.Stat(tmpPath)
@@ -683,7 +685,7 @@ Example:
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		id := args[0]
 		text := strings.Join(args[1:], " ")
@@ -713,7 +715,7 @@ Example:
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		if err := database.SetParent(args[0], args[1]); err != nil {
 			return err
@@ -739,7 +741,7 @@ Example:
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		// blocks A B means B depends on A (A blocks B)
 		if err := database.AddDep(args[1], args[0]); err != nil {
@@ -1041,7 +1043,7 @@ Example hook configuration in Claude Code settings:
 			printPrimeContent(nil)
 			return nil
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		report, _ := database.ProjectStatus("")
 		printPrimeContent(report)

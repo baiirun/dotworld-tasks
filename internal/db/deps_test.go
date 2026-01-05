@@ -69,7 +69,9 @@ func TestAddDep_Duplicate(t *testing.T) {
 	task1 := createTestItem(t, db, "Task 1")
 	task2 := createTestItem(t, db, "Task 2")
 
-	db.AddDep(task2.ID, task1.ID)
+	if err := db.AddDep(task2.ID, task1.ID); err != nil {
+		t.Fatalf("failed to add dep: %v", err)
+	}
 
 	// Adding duplicate should not error (INSERT OR IGNORE)
 	if err := db.AddDep(task2.ID, task1.ID); err != nil {
@@ -88,7 +90,9 @@ func TestHasUnmetDeps(t *testing.T) {
 	task1 := createTestItem(t, db, "Task 1")
 	task2 := createTestItem(t, db, "Task 2")
 
-	db.AddDep(task2.ID, task1.ID)
+	if err := db.AddDep(task2.ID, task1.ID); err != nil {
+		t.Fatalf("failed to add dep: %v", err)
+	}
 
 	// task1 is open, so task2 has unmet deps
 	unmet, err := db.HasUnmetDeps(task2.ID)
@@ -100,7 +104,9 @@ func TestHasUnmetDeps(t *testing.T) {
 	}
 
 	// Mark task1 as done
-	db.UpdateStatus(task1.ID, model.StatusDone)
+	if err := db.UpdateStatus(task1.ID, model.StatusDone); err != nil {
+		t.Fatalf("failed to update status: %v", err)
+	}
 
 	unmet, _ = db.HasUnmetDeps(task2.ID)
 	if unmet {
@@ -144,8 +150,12 @@ func TestGetAllDeps(t *testing.T) {
 	task3 := createTestItem(t, db, "Task 3")
 
 	// task2 depends on task1, task3 depends on task1
-	db.AddDep(task2.ID, task1.ID)
-	db.AddDep(task3.ID, task1.ID)
+	if err := db.AddDep(task2.ID, task1.ID); err != nil {
+		t.Fatalf("failed to add dep: %v", err)
+	}
+	if err := db.AddDep(task3.ID, task1.ID); err != nil {
+		t.Fatalf("failed to add dep: %v", err)
+	}
 
 	edges, err := db.GetAllDeps("")
 	if err != nil {
@@ -173,7 +183,9 @@ func TestGetAllDeps_FilterByProject(t *testing.T) {
 	// Create tasks in "test" project (default from createTestItem)
 	task1 := createTestItem(t, db, "Task 1")
 	task2 := createTestItem(t, db, "Task 2")
-	db.AddDep(task2.ID, task1.ID)
+	if err := db.AddDep(task2.ID, task1.ID); err != nil {
+		t.Fatalf("failed to add dep: %v", err)
+	}
 
 	// Create task in different project
 	otherTask := &model.Item{
@@ -183,7 +195,9 @@ func TestGetAllDeps_FilterByProject(t *testing.T) {
 		Title:   "Other Task",
 		Status:  model.StatusOpen,
 	}
-	db.CreateItem(otherTask)
+	if err := db.CreateItem(otherTask); err != nil {
+		t.Fatalf("failed to create otherTask: %v", err)
+	}
 	otherTask2 := &model.Item{
 		ID:      model.GenerateID(model.ItemTypeTask),
 		Project: "other",
@@ -191,8 +205,12 @@ func TestGetAllDeps_FilterByProject(t *testing.T) {
 		Title:   "Other Task 2",
 		Status:  model.StatusOpen,
 	}
-	db.CreateItem(otherTask2)
-	db.AddDep(otherTask2.ID, otherTask.ID)
+	if err := db.CreateItem(otherTask2); err != nil {
+		t.Fatalf("failed to create otherTask2: %v", err)
+	}
+	if err := db.AddDep(otherTask2.ID, otherTask.ID); err != nil {
+		t.Fatalf("failed to add dep: %v", err)
+	}
 
 	// Filter by "test" project
 	edges, err := db.GetAllDeps("test")

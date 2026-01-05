@@ -1,12 +1,10 @@
 package main
 
 import (
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/baiirun/prog/internal/db"
 	"github.com/baiirun/prog/internal/model"
 )
 
@@ -257,26 +255,3 @@ func TestAddCmd_BothFlags(t *testing.T) {
 	}
 }
 
-// setupTestDB is defined in prime_test.go, but we need it here too
-// for when tests are run in isolation. This is a no-op if already defined.
-func init() {
-	// Ensure setupTestDB exists - it's defined in prime_test.go
-}
-
-func setupTestDBLocal(t *testing.T) *db.DB {
-	t.Helper()
-	dir := t.TempDir()
-	path := filepath.Join(dir, "test.db")
-
-	database, err := db.Open(path)
-	if err != nil {
-		t.Fatalf("failed to open db: %v", err)
-	}
-
-	if err := database.Init(); err != nil {
-		t.Fatalf("failed to init db: %v", err)
-	}
-
-	t.Cleanup(func() { database.Close() })
-	return database
-}

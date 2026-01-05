@@ -31,7 +31,7 @@ func (db *DB) GetDeps(itemID string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get dependencies: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var deps []string
 	for rows.Next() {
@@ -88,7 +88,7 @@ func (db *DB) GetAllDeps(project string) ([]DepEdge, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query deps: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var edges []DepEdge
 	for rows.Next() {

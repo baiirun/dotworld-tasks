@@ -129,7 +129,7 @@ func (db *DB) ProjectStatus(project string) (*StatusReport, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to count statuses: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var status string
@@ -197,7 +197,7 @@ func (db *DB) ListProjects() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query projects: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var projects []string
 	for rows.Next() {
@@ -216,7 +216,7 @@ func (db *DB) queryItems(query string, args ...any) ([]model.Item, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query items: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []model.Item
 	for rows.Next() {
