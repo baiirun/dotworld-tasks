@@ -51,6 +51,7 @@ tasks done ts-a1b2c3
 | `tasks show <id>` | Show task details, logs, and dependencies |
 | `tasks ready` | Show tasks ready for work (open + deps met) |
 | `tasks status` | Project overview for agent spin-up |
+| `tasks prime` | Output context for Claude Code hooks |
 
 ### Work Commands
 
@@ -138,6 +139,36 @@ tasks done ts-d4e5f6
 # Or mark blocked for next agent
 tasks block ts-d4e5f6 "Need API spec for OAuth flow"
 ```
+
+## Claude Code Integration
+
+The `tasks prime` command outputs workflow context designed for Claude Code hooks. It ensures agents maintain context about the tasks workflow across sessions and after context compaction.
+
+### Hook Configuration
+
+Add to your Claude Code settings (`.claude/settings.json`):
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      { "command": "tasks prime" }
+    ],
+    "PreCompact": [
+      { "command": "tasks prime" }
+    ]
+  }
+}
+```
+
+### What `tasks prime` outputs
+
+- **SESSION CLOSE PROTOCOL**: Mandatory checklist for logging progress and updating status before ending sessions
+- **Core Rules**: When to use `tasks` (strategic, cross-session) vs TodoWrite (tactical, within-session)
+- **Essential Commands**: Quick reference grouped by workflow phase
+- **Current State**: Live summary of open, in-progress, and blocked tasks
+
+This ensures agents never forget the workflow, even after context compaction.
 
 ## Data Model
 
