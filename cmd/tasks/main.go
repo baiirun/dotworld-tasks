@@ -782,6 +782,9 @@ Before ending ANY session, you MUST complete ALL of these steps:
 3. Add handoff context for next agent:
    tasks append <id> "Next steps: ..."
 
+4. Update parent epic (if task is part of one):
+   tasks append <epic-id> "Completed X, next: Y"
+
 NEVER end a session without updating task state.
 Work is NOT complete until tasks reflect reality.
 

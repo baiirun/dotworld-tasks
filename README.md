@@ -140,6 +140,9 @@ tasks done ts-d4e5f6
 
 # Or mark blocked for next agent
 tasks block ts-d4e5f6 "Need API spec for OAuth flow"
+
+# If task is part of an epic, update the epic too
+tasks append ep-a1b2c3 "Completed auth endpoint, next: write tests"
 ```
 
 ### Dependencies
