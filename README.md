@@ -117,6 +117,7 @@ prog done ts-a1b2c3
 | `--blocked-by` | list | Show items blocked by the given ID |
 | `--has-blockers` | list | Show only items with unresolved blockers |
 | `--no-blockers` | list | Show only items with no blockers |
+| `--all` | status | Show all ready tasks (default: limit to 10) |
 
 ## ID Format
 

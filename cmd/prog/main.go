@@ -47,6 +47,7 @@ var (
 	flagHasBlockers bool
 	flagNoBlockers  bool
 	flagEditTitle   string
+	flagStatusAll   bool
 )
 
 func openDB() (*db.DB, error) {
@@ -518,11 +519,14 @@ Includes:
   - Recently completed tasks
   - Currently in-progress tasks
   - Blocked tasks with reasons
-  - Ready tasks by priority
+  - Ready tasks by priority (limited to 10 by default)
+
+Use --all to show all ready tasks.
 
 Examples:
   prog status
-  prog status -p myproject`,
+  prog status -p myproject
+  prog status --all`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
 		if err != nil {
@@ -535,7 +539,7 @@ Examples:
 			return err
 		}
 
-		printStatusReport(report)
+		printStatusReport(report, flagStatusAll)
 		return nil
 	},
 }
@@ -1089,6 +1093,9 @@ func init() {
 	// edit flags
 	editCmd.Flags().StringVar(&flagEditTitle, "title", "", "New title for the task")
 
+	// status flags
+	statusCmd.Flags().BoolVar(&flagStatusAll, "all", false, "Show all ready tasks (default: limit to 10)")
+
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(listCmd)
@@ -1167,7 +1174,7 @@ func printItemDetail(item *model.Item, logs []model.Log, deps []string) {
 	}
 }
 
-func printStatusReport(report *db.StatusReport) {
+func printStatusReport(report *db.StatusReport, showAll bool) {
 	project := report.Project
 	if project == "" {
 		project = "(all)"
@@ -1203,8 +1210,18 @@ func printStatusReport(report *db.StatusReport) {
 
 	if len(report.ReadyItems) > 0 {
 		fmt.Println("Ready for work:")
-		for _, item := range report.ReadyItems {
+		readyLimit := 10
+		displayItems := report.ReadyItems
+		remaining := 0
+		if !showAll && len(report.ReadyItems) > readyLimit {
+			displayItems = report.ReadyItems[:readyLimit]
+			remaining = len(report.ReadyItems) - readyLimit
+		}
+		for _, item := range displayItems {
 			fmt.Printf("  [%s] %s (pri %d)\n", item.ID, item.Title, item.Priority)
+		}
+		if remaining > 0 {
+			fmt.Printf("  (+%d more, use --all to see all)\n", remaining)
 		}
 	}
 }
