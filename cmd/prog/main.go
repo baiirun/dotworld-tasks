@@ -249,7 +249,7 @@ Examples:
 			fmt.Println("No ready tasks")
 			return nil
 		}
-		printItemsTable(items)
+		printReadyTable(items)
 		return nil
 	},
 }
@@ -1206,9 +1206,20 @@ func printItemsTable(items []model.Item) {
 	}
 
 	fmt.Printf("%-12s %-12s %-4s %s\n", "ID", "STATUS", "PRI", "TITLE")
-	fmt.Println(strings.Repeat("-", 60))
 	for _, item := range items {
 		fmt.Printf("%-12s %-12s %-4d %s\n", item.ID, item.Status, item.Priority, item.Title)
+	}
+}
+
+func printReadyTable(items []model.Item) {
+	if len(items) == 0 {
+		fmt.Println("No items")
+		return
+	}
+
+	fmt.Printf("%-12s %-4s %s\n", "ID", "PRI", "TITLE")
+	for _, item := range items {
+		fmt.Printf("%-12s %-4d %s\n", item.ID, item.Priority, item.Title)
 	}
 }
 
@@ -1219,9 +1230,6 @@ func printItemDetail(item *model.Item, logs []model.Log, deps []string) {
 	fmt.Printf("Title:       %s\n", item.Title)
 	fmt.Printf("Status:      %s\n", item.Status)
 	fmt.Printf("Priority:    %d\n", item.Priority)
-	fmt.Printf("Created:     %s\n", item.CreatedAt.Format(time.RFC3339))
-	fmt.Printf("Updated:     %s\n", item.UpdatedAt.Format(time.RFC3339))
-
 	if item.ParentID != nil {
 		fmt.Printf("Parent:      %s\n", *item.ParentID)
 	}
