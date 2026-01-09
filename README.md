@@ -236,6 +236,167 @@ prog show ts-d4e5f6
 # Output includes: Parent: ep-a1b2c3
 ```
 
+## Context Engine
+
+The context engine captures tacit knowledge—things agents learn that aren't obvious from the code. This knowledge persists across sessions, helping future agents avoid rediscovering the same insights.
+
+### Data Model
+
+**Concepts** are knowledge categories within a project:
+```
+auth          - "Token lifecycle, refresh, session coupling"
+database      - "SQLite patterns, schema migrations"
+config        - "Environment loading, precedence rules"
+```
+
+**Learnings** are specific insights tagged with concepts:
+```
+lrn-abc123: Token refresh has race condition
+  Detail: The mutex only protects token write, not refresh check. See PR #423.
+  Concepts: auth, concurrency
+  Files: auth/token.go
+  Task: ts-def456
+```
+
+### Two-Phase Retrieval
+
+Agents retrieve context in phases to minimize token usage:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ PHASE 1: Discovery                                          │
+│   prog show <task>                                          │
+│     → Task details, logs, deps                              │
+│     → Suggested concepts: auth (3), config (2)              │
+│                                                             │
+│   Agent decides which concepts are relevant                 │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ PHASE 2: Scan                                               │
+│   prog context -c auth --summary                            │
+│     → auth: Token lifecycle, refresh, session coupling      │
+│     → lrn-abc: Token refresh has race condition             │
+│     → lrn-def: Auth tokens expire after 1 hour              │
+│                                                             │
+│   Agent sees concept summary, then learning one-liners      │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ PHASE 3: Load                                               │
+│   prog context --id lrn-abc                                 │
+│     → Full detail, files, linked task                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Each phase filters, so agents only load what's actually relevant.
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `prog concepts` | List concepts for a project |
+| `prog context -c <name>` | Retrieve learnings by concept(s) |
+| `prog context -q <query>` | Full-text search on learnings |
+| `prog learn <summary>` | Log a new learning |
+| `prog learn edit <id>` | Edit a learning's summary |
+| `prog learn stale <id>` | Mark learning as outdated |
+| `prog learn rm <id>` | Delete a learning |
+
+#### Retrieval Examples
+
+```bash
+# List concepts to see what knowledge exists
+prog concepts -p myproject
+# NAME          LEARNINGS  LAST UPDATED  SUMMARY
+# auth                  3  2h ago        Token lifecycle, refresh
+# database              2  1d ago        SQLite patterns
+
+# Retrieve by concept (union of multiple concepts)
+prog context -c auth -c database -p myproject
+
+# Full-text search when you don't know the concept
+prog context -q "race condition" -p myproject
+
+# Include stale learnings for historical context
+prog context -c auth --include-stale -p myproject
+```
+
+### Logging Learnings (Reflection)
+
+Log learnings at the end of a session during reflection. This is more efficient than logging during work because:
+
+- The learning is validated through implementation
+- You can synthesize related discoveries into one insight
+- You know what's signal vs noise
+
+```bash
+# Basic learning with concepts
+prog learn "Token refresh has race condition" -c auth -c concurrency -p myproject
+
+# With related files
+prog learn "Config loads from env first, then file" -c config -p myproject -f config.go
+
+# With full detail (coming soon)
+prog learn "summary" -c concept -p myproject --detail "full explanation..."
+```
+
+**What makes a good learning?**
+
+- Things that aren't obvious from reading the code
+- Gotchas, edge cases, "why" decisions
+- Context that would help the next agent
+
+**What to avoid logging:**
+
+- Things already documented in code comments
+- Obvious behavior that code makes clear
+- Temporary workarounds (mark as stale instead)
+
+#### Concept Hygiene
+
+- **Reuse existing concepts** — check `prog concepts` before creating new ones
+- **Create sparingly** — prefer broader concepts over narrow ones
+- **Use clear names** — `auth` not `authentication-and-authorization`
+
+### Grooming and Compaction
+
+Over time, knowledge accumulates and may become stale or redundant.
+
+#### Marking Learnings Stale
+
+When a learning becomes outdated but is still useful for reference:
+
+```bash
+prog learn stale lrn-abc123 --reason "Refactored in v2"
+```
+
+Stale learnings are excluded by default but can be included with `--include-stale`.
+
+#### Concept Grooming (coming soon)
+
+```bash
+# Merge fragmented concepts
+prog concepts merge authn auth
+
+# Archive unused concepts
+prog concepts archive legacy-api
+```
+
+#### Learning Compaction (coming soon)
+
+Summarize old learnings into fewer, denser learnings:
+
+```bash
+# Preview what would be compacted
+prog compact auth --dry-run
+
+# Compact learnings older than 30 days
+prog compact auth
+```
+
+This keeps the knowledge base navigable as it grows.
+
 ## Claude Code Integration
 
 The `prog onboard` command configures Claude Code hooks to inject workflow context at session start and before context compaction. This ensures agents maintain context about the prog workflow across sessions.
@@ -324,6 +485,8 @@ prog  12/47 items  status:oib
 - **Dependencies**: Task A can depend on Task B (A is blocked until B is done)
 - **Logs**: Timestamped audit trail per item
 - **Projects**: String tag to scope work (e.g., "gaia", "myapp")
+- **Concepts**: Knowledge categories within a project (e.g., "auth", "database")
+- **Learnings**: Specific insights tagged with concepts, with summary and detail
 
 Database location: `~/.prog/prog.db`
 
@@ -335,6 +498,7 @@ Database location: `~/.prog/prog.db`
 4. Track dependencies for ordering
 5. Prioritize work
 6. Store context so agents can resume where others left off
+7. Capture tacit knowledge that persists across sessions
 
 ## Non-Goals
 
