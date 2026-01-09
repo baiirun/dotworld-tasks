@@ -507,10 +507,14 @@ func (m Model) handleListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.applyFilters()
 
 	case "esc":
-		// Clear filters
-		m.filterSearch = ""
-		m.filterProject = ""
-		m.applyFilters()
+		// If filters are set, clear them; otherwise quit
+		if m.filterSearch != "" || m.filterProject != "" {
+			m.filterSearch = ""
+			m.filterProject = ""
+			m.applyFilters()
+		} else {
+			return m, tea.Quit
+		}
 
 	case "r":
 		return m, m.loadItems()
