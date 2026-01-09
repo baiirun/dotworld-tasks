@@ -49,7 +49,6 @@ var (
 	flagNoBlockers  bool
 	flagEditTitle   string
 	flagStatusAll   bool
-	flagBrief       bool
 )
 
 func openDB() (*db.DB, error) {
@@ -215,13 +214,7 @@ Examples:
 			return err
 		}
 
-		if flagBrief {
-			for _, item := range items {
-				fmt.Println(item.ID)
-			}
-		} else {
-			printItemsTable(items)
-		}
+		printItemsTable(items)
 		return nil
 	},
 }
@@ -266,11 +259,8 @@ var showCmd = &cobra.Command{
 	Short: "Show task details",
 	Long: `Show full details for a task including description, logs, and dependencies.
 
-Use --brief for a one-line summary.
-
 Example:
-  prog show ts-a1b2c3
-  prog show ts-a1b2c3 --brief`,
+  prog show ts-a1b2c3`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
@@ -282,11 +272,6 @@ Example:
 		item, err := database.GetItem(args[0])
 		if err != nil {
 			return err
-		}
-
-		if flagBrief {
-			fmt.Printf("%s | %s | %s\n", item.ID, item.Status, item.Title)
-			return nil
 		}
 
 		logs, err := database.GetLogs(args[0])
@@ -538,13 +523,11 @@ Includes:
   - Ready tasks by priority (limited to 10 by default)
 
 Use --all to show all ready tasks.
-Use --brief for just the counts.
 
 Examples:
   prog status
   prog status -p myproject
-  prog status --all
-  prog status --brief`,
+  prog status --all`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
 		if err != nil {
@@ -555,12 +538,6 @@ Examples:
 		report, err := database.ProjectStatus(flagProject)
 		if err != nil {
 			return err
-		}
-
-		if flagBrief {
-			fmt.Printf("%d open, %d in_progress, %d blocked, %d done, %d canceled\n",
-				report.Open, report.InProgress, report.Blocked, report.Done, report.Canceled)
-			return nil
 		}
 
 		printStatusReport(report, flagStatusAll)
@@ -1187,11 +1164,6 @@ func init() {
 
 	// status flags
 	statusCmd.Flags().BoolVar(&flagStatusAll, "all", false, "Show all ready tasks (default: limit to 10)")
-	statusCmd.Flags().BoolVar(&flagBrief, "brief", false, "Show only status counts")
-
-	// brief flags for terse output
-	listCmd.Flags().BoolVar(&flagBrief, "brief", false, "Show only task IDs, one per line")
-	showCmd.Flags().BoolVar(&flagBrief, "brief", false, "Show one-line summary")
 
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
