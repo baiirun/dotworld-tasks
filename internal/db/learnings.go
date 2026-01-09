@@ -518,9 +518,10 @@ func (db *DB) GetRelatedConcepts(taskID string) ([]model.Concept, error) {
 	searchText := strings.ToLower(item.Title + " " + item.Description)
 
 	// Filter concepts whose name appears in the search text
+	// Only include concepts that have at least one learning
 	var related []model.Concept
 	for _, c := range concepts {
-		if strings.Contains(searchText, strings.ToLower(c.Name)) {
+		if c.LearningCount > 0 && strings.Contains(searchText, strings.ToLower(c.Name)) {
 			related = append(related, c)
 		}
 	}
