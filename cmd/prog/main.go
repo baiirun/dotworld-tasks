@@ -839,6 +839,67 @@ Example:
 	},
 }
 
+var labelCmd = &cobra.Command{
+	Use:   "label <item-id> <label-name>",
+	Short: "Add a label to a task",
+	Long: `Add a label to a task or epic.
+
+Creates the label if it doesn't exist (like concepts).
+
+Example:
+  prog label ts-a1b2c3 bug
+  prog label ts-a1b2c3 urgent`,
+	Args: cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		database, err := openDB()
+		if err != nil {
+			return err
+		}
+		defer func() { _ = database.Close() }()
+
+		// Get item to find its project
+		item, err := database.GetItem(args[0])
+		if err != nil {
+			return err
+		}
+
+		if err := database.AddLabelToItem(args[0], item.Project, args[1]); err != nil {
+			return err
+		}
+		fmt.Printf("Added label %q to %s\n", args[1], args[0])
+		return nil
+	},
+}
+
+var unlabelCmd = &cobra.Command{
+	Use:   "unlabel <item-id> <label-name>",
+	Short: "Remove a label from a task",
+	Long: `Remove a label from a task or epic.
+
+Example:
+  prog unlabel ts-a1b2c3 bug`,
+	Args: cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		database, err := openDB()
+		if err != nil {
+			return err
+		}
+		defer func() { _ = database.Close() }()
+
+		// Get item to find its project
+		item, err := database.GetItem(args[0])
+		if err != nil {
+			return err
+		}
+
+		if err := database.RemoveLabelFromItem(args[0], item.Project, args[1]); err != nil {
+			return err
+		}
+		fmt.Printf("Removed label %q from %s\n", args[1], args[0])
+		return nil
+	},
+}
+
 var learnCmd = &cobra.Command{
 	Use:   "learn <summary>",
 	Short: "Log a learning for future context retrieval",
@@ -1974,6 +2035,8 @@ func init() {
 	rootCmd.AddCommand(parentCmd)
 	rootCmd.AddCommand(projectCmd)
 	rootCmd.AddCommand(blocksCmd)
+	rootCmd.AddCommand(labelCmd)
+	rootCmd.AddCommand(unlabelCmd)
 	rootCmd.AddCommand(learnCmd)
 	rootCmd.AddCommand(conceptsCmd)
 	rootCmd.AddCommand(labelsCmd)
