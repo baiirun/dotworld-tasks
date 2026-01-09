@@ -1,6 +1,6 @@
 # prog
 
-Lightweight task management for AI agents. SQLite-backed, CLI-driven.
+Task and tacit knowledge management for AI agents. SQLite-backed, CLI-driven.
 
 ## Install
 
