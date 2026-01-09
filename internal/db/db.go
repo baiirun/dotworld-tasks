@@ -148,7 +148,11 @@ type DB struct {
 }
 
 // DefaultPath returns the default database path (~/.prog/prog.db)
+// Can be overridden with PROG_DB environment variable.
 func DefaultPath() (string, error) {
+	if envPath := os.Getenv("PROG_DB"); envPath != "" {
+		return envPath, nil
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get home directory: %w", err)

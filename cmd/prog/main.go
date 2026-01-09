@@ -69,6 +69,7 @@ var (
 	flagLearnDetail      string
 	flagLabelsColor      string
 	flagAddLabels        []string
+	flagFilterLabels     []string
 )
 
 func openDB() (*db.DB, error) {
@@ -218,7 +219,8 @@ Examples:
   prog list --blocking ts-xyz789
   prog list --blocked-by ts-abc123
   prog list --has-blockers
-  prog list --no-blockers`,
+  prog list --no-blockers
+  prog list -l bug -l urgent`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
 		if err != nil {
@@ -244,6 +246,7 @@ Examples:
 			BlockedBy:   flagBlockedBy,
 			HasBlockers: flagHasBlockers,
 			NoBlockers:  flagNoBlockers,
+			Labels:      flagFilterLabels,
 		}
 
 		items, err := database.ListItemsFiltered(filter)
@@ -269,7 +272,8 @@ Results are sorted by priority (1=high first).
 
 Examples:
   prog ready
-  prog ready -p myproject`,
+  prog ready -p myproject
+  prog ready -l bug`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
 		if err != nil {
@@ -277,7 +281,7 @@ Examples:
 		}
 		defer func() { _ = database.Close() }()
 
-		items, err := database.ReadyItems(flagProject)
+		items, err := database.ReadyItemsFiltered(flagProject, flagFilterLabels)
 		if err != nil {
 			return err
 		}
@@ -579,7 +583,8 @@ Use --all to show all ready tasks.
 Examples:
   prog status
   prog status -p myproject
-  prog status --all`,
+  prog status --all
+  prog status -l bug`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := openDB()
 		if err != nil {
@@ -587,7 +592,7 @@ Examples:
 		}
 		defer func() { _ = database.Close() }()
 
-		report, err := database.ProjectStatus(flagProject)
+		report, err := database.ProjectStatusFiltered(flagProject, flagFilterLabels)
 		if err != nil {
 			return err
 		}
@@ -1972,6 +1977,7 @@ func init() {
 	listCmd.Flags().StringVar(&flagBlockedBy, "blocked-by", "", "Show items blocked by the given ID")
 	listCmd.Flags().BoolVar(&flagHasBlockers, "has-blockers", false, "Show only items with unresolved blockers")
 	listCmd.Flags().BoolVar(&flagNoBlockers, "no-blockers", false, "Show only items with no blockers")
+	listCmd.Flags().StringArrayVarP(&flagFilterLabels, "label", "l", nil, "Filter by label (can be repeated, AND logic)")
 
 	// onboard flags
 	onboardCmd.Flags().BoolVar(&flagForce, "force", false, "Replace existing Task Tracking section")
@@ -1979,8 +1985,12 @@ func init() {
 	// edit flags
 	editCmd.Flags().StringVar(&flagEditTitle, "title", "", "New title for the task")
 
+	// ready flags
+	readyCmd.Flags().StringArrayVarP(&flagFilterLabels, "label", "l", nil, "Filter by label (can be repeated, AND logic)")
+
 	// status flags
 	statusCmd.Flags().BoolVar(&flagStatusAll, "all", false, "Show all ready tasks (default: limit to 10)")
+	statusCmd.Flags().StringArrayVarP(&flagFilterLabels, "label", "l", nil, "Filter by label (can be repeated, AND logic)")
 
 	// learn flags
 	learnCmd.Flags().StringArrayVarP(&flagLearnConcept, "concept", "c", nil, "Concept to tag this learning with (can be repeated)")

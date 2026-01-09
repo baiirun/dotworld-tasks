@@ -17,6 +17,7 @@ type ListFilter struct {
 	BlockedBy   string        // Show items blocked by this ID
 	HasBlockers bool          // Show only items with unresolved blockers
 	NoBlockers  bool          // Show only items with no blockers
+	Labels      []string      // Filter by label names (AND - items must have all)
 }
 
 // ListItems returns items filtered by project and/or status.
@@ -70,6 +71,28 @@ func (db *DB) ListItemsFiltered(filter ListFilter) ([]model.Item, error) {
 		// Items with no blockers (either no deps, or all deps are done)
 		query += ` AND id NOT IN (SELECT d.item_id FROM deps d JOIN items i ON d.depends_on = i.id WHERE i.status != 'done')`
 	}
+	if len(filter.Labels) > 0 {
+		// Items must have ALL specified labels (AND semantics)
+		// Build placeholder list for IN clause
+		placeholders := ""
+		for i := range filter.Labels {
+			if i > 0 {
+				placeholders += ", "
+			}
+			placeholders += "?"
+		}
+		query += fmt.Sprintf(` AND id IN (
+			SELECT il.item_id FROM item_labels il
+			JOIN labels l ON il.label_id = l.id
+			WHERE l.name IN (%s)
+			GROUP BY il.item_id
+			HAVING COUNT(DISTINCT l.name) = ?
+		)`, placeholders)
+		for _, label := range filter.Labels {
+			args = append(args, label)
+		}
+		args = append(args, len(filter.Labels))
+	}
 	query += ` ORDER BY priority ASC, created_at ASC`
 
 	return db.queryItems(query, args...)
@@ -77,6 +100,11 @@ func (db *DB) ListItemsFiltered(filter ListFilter) ([]model.Item, error) {
 
 // ReadyItems returns items that are open and have no unmet dependencies.
 func (db *DB) ReadyItems(project string) ([]model.Item, error) {
+	return db.ReadyItemsFiltered(project, nil)
+}
+
+// ReadyItemsFiltered returns ready items with optional label filtering.
+func (db *DB) ReadyItemsFiltered(project string, labels []string) ([]model.Item, error) {
 	query := `
 		SELECT id, project, type, title, description, status, priority, parent_id, created_at, updated_at
 		FROM items
@@ -91,6 +119,27 @@ func (db *DB) ReadyItems(project string) ([]model.Item, error) {
 	if project != "" {
 		query += ` AND project = ?`
 		args = append(args, project)
+	}
+	if len(labels) > 0 {
+		// Items must have ALL specified labels (AND semantics)
+		placeholders := ""
+		for i := range labels {
+			if i > 0 {
+				placeholders += ", "
+			}
+			placeholders += "?"
+		}
+		query += fmt.Sprintf(` AND id IN (
+			SELECT il.item_id FROM item_labels il
+			JOIN labels l ON il.label_id = l.id
+			WHERE l.name IN (%s)
+			GROUP BY il.item_id
+			HAVING COUNT(DISTINCT l.name) = ?
+		)`, placeholders)
+		for _, label := range labels {
+			args = append(args, label)
+		}
+		args = append(args, len(labels))
 	}
 	query += ` ORDER BY priority ASC, created_at ASC`
 
@@ -114,14 +163,47 @@ type StatusReport struct {
 
 // ProjectStatus returns an aggregated status report for a project.
 func (db *DB) ProjectStatus(project string) (*StatusReport, error) {
+	return db.ProjectStatusFiltered(project, nil)
+}
+
+// ProjectStatusFiltered returns an aggregated status report with optional label filtering.
+func (db *DB) ProjectStatusFiltered(project string, labels []string) (*StatusReport, error) {
 	report := &StatusReport{Project: project}
 
+	// Build label subquery for reuse
+	labelSubquery := ""
+	labelArgs := []any{}
+	if len(labels) > 0 {
+		placeholders := ""
+		for i := range labels {
+			if i > 0 {
+				placeholders += ", "
+			}
+			placeholders += "?"
+		}
+		labelSubquery = fmt.Sprintf(` AND id IN (
+			SELECT il.item_id FROM item_labels il
+			JOIN labels l ON il.label_id = l.id
+			WHERE l.name IN (%s)
+			GROUP BY il.item_id
+			HAVING COUNT(DISTINCT l.name) = ?
+		)`, placeholders)
+		for _, label := range labels {
+			labelArgs = append(labelArgs, label)
+		}
+		labelArgs = append(labelArgs, len(labels))
+	}
+
 	// Count by status
-	query := `SELECT status, COUNT(*) FROM items`
+	query := `SELECT status, COUNT(*) FROM items WHERE 1=1`
 	args := []any{}
 	if project != "" {
-		query += ` WHERE project = ?`
+		query += ` AND project = ?`
 		args = append(args, project)
+	}
+	if labelSubquery != "" {
+		query += labelSubquery
+		args = append(args, labelArgs...)
 	}
 	query += ` GROUP BY status`
 
@@ -152,7 +234,7 @@ func (db *DB) ProjectStatus(project string) (*StatusReport, error) {
 	}
 
 	// Get ready count and items
-	readyItems, err := db.ReadyItems(project)
+	readyItems, err := db.ReadyItemsFiltered(project, labels)
 	if err != nil {
 		return nil, err
 	}
@@ -161,14 +243,14 @@ func (db *DB) ProjectStatus(project string) (*StatusReport, error) {
 
 	// Get in-progress items
 	inProgStatus := model.StatusInProgress
-	report.InProgItems, err = db.ListItems(project, &inProgStatus)
+	report.InProgItems, err = db.ListItemsFiltered(ListFilter{Project: project, Status: &inProgStatus, Labels: labels})
 	if err != nil {
 		return nil, err
 	}
 
 	// Get blocked items
 	blockedStatus := model.StatusBlocked
-	report.BlockedItems, err = db.ListItems(project, &blockedStatus)
+	report.BlockedItems, err = db.ListItemsFiltered(ListFilter{Project: project, Status: &blockedStatus, Labels: labels})
 	if err != nil {
 		return nil, err
 	}
@@ -181,6 +263,10 @@ func (db *DB) ProjectStatus(project string) (*StatusReport, error) {
 	if project != "" {
 		recentQuery += ` AND project = ?`
 		recentArgs = append(recentArgs, project)
+	}
+	if labelSubquery != "" {
+		recentQuery += labelSubquery
+		recentArgs = append(recentArgs, labelArgs...)
 	}
 	recentQuery += ` ORDER BY updated_at DESC LIMIT 3`
 	report.RecentDone, err = db.queryItems(recentQuery, recentArgs...)
