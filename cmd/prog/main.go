@@ -34,27 +34,29 @@ type Hook struct {
 }
 
 var (
-	flagProject         string
-	flagStatus          string
-	flagEpic            bool
-	flagPriority        int
-	flagForce           bool
-	flagParent          string
-	flagBlocks          string
-	flagListParent      string
-	flagListType        string
-	flagBlocking        string
-	flagBlockedBy       string
-	flagHasBlockers     bool
-	flagNoBlockers      bool
-	flagEditTitle       string
-	flagStatusAll       bool
-	flagLearnConcept    []string
-	flagLearnFile       []string
-	flagConceptsRecent  bool
-	flagConceptsRelated string
-	flagConceptsSummary string
-	flagConceptsRename  string
+	flagProject          string
+	flagStatus           string
+	flagEpic             bool
+	flagPriority         int
+	flagForce            bool
+	flagParent           string
+	flagBlocks           string
+	flagListParent       string
+	flagListType         string
+	flagBlocking         string
+	flagBlockedBy        string
+	flagHasBlockers      bool
+	flagNoBlockers       bool
+	flagEditTitle        string
+	flagStatusAll        bool
+	flagLearnConcept     []string
+	flagLearnFile        []string
+	flagLearnEditSummary string
+	flagLearnStaleReason string
+	flagConceptsRecent   bool
+	flagConceptsRelated  string
+	flagConceptsSummary  string
+	flagConceptsRename   string
 )
 
 func openDB() (*db.DB, error) {
@@ -863,6 +865,86 @@ Examples:
 	},
 }
 
+var learnEditCmd = &cobra.Command{
+	Use:   "edit <learning-id>",
+	Short: "Edit a learning's summary",
+	Long: `Edit an existing learning's summary.
+
+Example:
+  prog learn edit lrn-abc123 --summary "Updated summary"`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if flagLearnEditSummary == "" {
+			return fmt.Errorf("--summary is required")
+		}
+
+		database, err := openDB()
+		if err != nil {
+			return err
+		}
+		defer func() { _ = database.Close() }()
+
+		if err := database.UpdateLearningSummary(args[0], flagLearnEditSummary); err != nil {
+			return err
+		}
+		fmt.Printf("Updated %s\n", args[0])
+		return nil
+	},
+}
+
+var learnStaleCmd = &cobra.Command{
+	Use:   "stale <learning-id>",
+	Short: "Mark a learning as stale (outdated)",
+	Long: `Mark a learning as stale when it's outdated but still useful for reference.
+
+Example:
+  prog learn stale lrn-abc123 --reason "Refactored in v2"`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		database, err := openDB()
+		if err != nil {
+			return err
+		}
+		defer func() { _ = database.Close() }()
+
+		if err := database.UpdateLearningStatus(args[0], model.LearningStatusStale); err != nil {
+			return err
+		}
+
+		// Log reason if provided
+		if flagLearnStaleReason != "" {
+			// We could add a detail field update here, but for now just print
+			fmt.Printf("Marked %s as stale: %s\n", args[0], flagLearnStaleReason)
+		} else {
+			fmt.Printf("Marked %s as stale\n", args[0])
+		}
+		return nil
+	},
+}
+
+var learnRmCmd = &cobra.Command{
+	Use:   "rm <learning-id>",
+	Short: "Delete a learning",
+	Long: `Permanently delete a learning and its concept associations.
+
+Example:
+  prog learn rm lrn-abc123`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		database, err := openDB()
+		if err != nil {
+			return err
+		}
+		defer func() { _ = database.Close() }()
+
+		if err := database.DeleteLearning(args[0]); err != nil {
+			return err
+		}
+		fmt.Printf("Deleted %s\n", args[0])
+		return nil
+	},
+}
+
 var conceptsCmd = &cobra.Command{
 	Use:   "concepts [name]",
 	Short: "List or edit concepts for a project",
@@ -1306,6 +1388,17 @@ func init() {
 	// learn flags
 	learnCmd.Flags().StringArrayVarP(&flagLearnConcept, "concept", "c", nil, "Concept to tag this learning with (can be repeated)")
 	learnCmd.Flags().StringArrayVarP(&flagLearnFile, "file", "f", nil, "Related file (can be repeated)")
+
+	// learn subcommands
+	learnCmd.AddCommand(learnEditCmd)
+	learnCmd.AddCommand(learnStaleCmd)
+	learnCmd.AddCommand(learnRmCmd)
+
+	// learn edit flags
+	learnEditCmd.Flags().StringVar(&flagLearnEditSummary, "summary", "", "New summary for the learning")
+
+	// learn stale flags
+	learnStaleCmd.Flags().StringVar(&flagLearnStaleReason, "reason", "", "Reason for marking as stale")
 
 	// concepts flags
 	conceptsCmd.Flags().BoolVar(&flagConceptsRecent, "recent", false, "Sort by last updated instead of learning count")

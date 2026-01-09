@@ -197,6 +197,68 @@ func (db *DB) SetConceptSummary(name, project, summary string) error {
 	return nil
 }
 
+// UpdateLearningSummary updates a learning's summary.
+func (db *DB) UpdateLearningSummary(id, summary string) error {
+	result, err := db.Exec(`
+		UPDATE learnings SET summary = ?, updated_at = ?
+		WHERE id = ?
+	`, summary, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("failed to update learning: %w", err)
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("learning not found: %s", id)
+	}
+	return nil
+}
+
+// UpdateLearningStatus updates a learning's status (active, stale, archived).
+func (db *DB) UpdateLearningStatus(id string, status model.LearningStatus) error {
+	result, err := db.Exec(`
+		UPDATE learnings SET status = ?, updated_at = ?
+		WHERE id = ?
+	`, status, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("failed to update learning status: %w", err)
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("learning not found: %s", id)
+	}
+	return nil
+}
+
+// DeleteLearning removes a learning and its concept associations.
+func (db *DB) DeleteLearning(id string) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Delete concept associations
+	_, err = tx.Exec(`DELETE FROM learning_concepts WHERE learning_id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete concept associations: %w", err)
+	}
+
+	// Delete learning
+	result, err := tx.Exec(`DELETE FROM learnings WHERE id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete learning: %w", err)
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("learning not found: %s", id)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+	return nil
+}
+
 // RenameConcept changes a concept's name.
 func (db *DB) RenameConcept(oldName, newName, project string) error {
 	result, err := db.Exec(`
